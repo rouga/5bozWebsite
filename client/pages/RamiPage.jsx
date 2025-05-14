@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import useAuth from '../src/hooks/useAuth';
 
 export default function RamiPage() {
+
   const [form, setForm] = useState({
     team1: '',
     team2: '',
@@ -21,7 +23,8 @@ export default function RamiPage() {
       const res = await fetch('http://192.168.0.12:5000/api/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
+        credentials: 'include'
       });
 
       if (res.ok) {
