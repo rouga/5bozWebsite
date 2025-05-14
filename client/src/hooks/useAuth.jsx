@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export default function useAuth() {
-  const [user, setUser] = useState(false); // null = unknown, false = guest, object = logged in
+  const [user, setUser] = useState(); // null = unknown, false = guest, object = logged in
 
   useEffect(() => {
     fetch('http://192.168.0.12:5000/api/me', {

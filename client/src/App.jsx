@@ -24,7 +24,7 @@ function App() {
     <div className="container">
       <nav className="navbar  navbar-expand-md py-3 mb-4 border-bottom">
         <a href="/" className="navbar-brand d-flex align-items-center">
-          <img src="/favIcon.svg" className="me-2" width={40} alt="logo" />
+          <img src="/favIcon.svg" className="me-2" width={40} alt="bread logo" />
           <span className="fs-1 lobster-regular title-color">5BOZ</span>
         </a>
 
@@ -59,17 +59,23 @@ function App() {
             {user === null ? null : user ? (
               <>
               <li className="nav-item fw-semibold fs-5 me-1">
-                <span className="nav-link title-color">👋 Welcome, {user.username}</span>
+                <span className="nav-link title-color">{user.username}</span>
               </li>
-              <li className="nav-item fw-semibold">
+              <li className="nav-item fw-semibold fs-5 me-1">
                 <a href="#" className="nav-link title-color" onClick={async (e) => {
                   e.preventDefault();
-                  await fetch('http://localhost:5000/api/logout', {
+                  try {
+                    const res = await fetch('http://localhost:5000/api/logout', {
                     method: 'POST',
                     credentials: 'include'
                   });
-                  setUser(false); // Clear session
-                  navigate('/');  // Redirect to home page
+                   const data = await res.json();
+                  setUser(false);
+                  navigate('/', { state: { logout: '✅ Logout successful!' } });
+                } catch (err) {
+                  console.error('Logout failed:', err);
+                  navigate('/', { state: { logout: '❌ Logout failed. Try again.' } });
+                 }
                 }}>Logout</a>
               </li>
               </>

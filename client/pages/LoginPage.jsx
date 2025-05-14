@@ -24,7 +24,7 @@ const navigate = useNavigate();
 
       if (res.ok) {
         setStatus({ type: 'success', message: data.message });
-        navigate('/');
+        navigate('/', { state: { welcome: `Bienvenue, ${form.username}!` } });
       } else {
         setStatus({ type: 'error', message: data.error || 'Login failed' });
       }

@@ -17,6 +17,7 @@ app.use(session({
   cookie: {
     secure: false, // true if using HTTPS
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 12 // 12 hours
   }
 }));
@@ -93,7 +94,6 @@ app.post('/api/login', async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: 'Invalid username or password' });
 
     req.session.userId = user.id;
-    console.log(req.session.userId);
     res.json({ message: 'Login successful' /*, token */ });
   } catch (err) {
     console.error(err);
@@ -115,7 +115,13 @@ app.post('/api/logout', (req, res) => {
       console.error('Failed to destroy session:', err);
       return res.status(500).json({ error: 'Logout failed' });
     }
-    res.clearCookie('connect.sid'); // Important to clear the session cookie
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: false, // true in production over HTTPS
+      sameSite: 'lax', // must match cookie set on login
+    });
+    console.log("Logout successful");
     res.json({ message: 'Logout successful' });
   });
 });
