@@ -764,6 +764,16 @@ export default function RamiPage() {
             <div className="row g-2">
               <div className="col-5">
                 <div className="text-center p-2 bg-light rounded">
+                  <div className="fw-bold small text-muted">TEAM 1</div>
+                  <div className="fw-semibold small">{game.team1}</div>
+                  <div className="h6 mb-0 text-primary">{game.score1}</div>
+                </div>
+              </div>
+              <div className="col-2 d-flex align-items-center justify-content-center">
+                <span className="text-muted fw-bold">VS</span>
+              </div>
+              <div className="col-5">
+                <div className="text-center p-2 bg-light rounded">
                   <div className="fw-bold small text-muted">TEAM 2</div>
                   <div className="fw-semibold small">{game.team2}</div>
                   <div className="h6 mb-0 text-primary">{game.score2}</div>
