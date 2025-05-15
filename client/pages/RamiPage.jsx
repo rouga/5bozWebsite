@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import useAuth from '../src/hooks/useAuth';
 
 export default function RamiPage() {
 
