@@ -41,7 +41,7 @@ app.post('/api/scores', async (req, res) => {
   res.json(result.rows[0]);
 });
 
-// Singup request
+// Signup request
 app.post('/api/signup', async (req, res) => {
   const { username, password, code } = req.body;
 
@@ -97,6 +97,51 @@ app.post('/api/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed. Try again later.' });
+  }
+});
+
+// Change password endpoint
+app.post('/api/change-password', async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'You must be logged in to change your password' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Password should contain at least 6 characters' });
+  }
+
+  try {
+    // Get current user
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    await pool.query(
+      'UPDATE users SET password = $1 WHERE id = $2',
+      [hashedPassword, userId]
+    );
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Error changing password:', err);
+    res.status(500).json({ error: 'Failed to update password. Please try again later.' });
   }
 });
 

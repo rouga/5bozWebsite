@@ -6,6 +6,7 @@ import JakiPage from '../pages/JakiPage';
 import LudoPage from '../pages/LudoPage';
 import SignupPage from '../pages/SignupPage';
 import LoginPage from '../pages/LoginPage';
+import ProfilePage from '../pages/ProfilePage';
 import useAuth from './hooks/useAuth';
 
 function App() {
@@ -96,27 +97,56 @@ function App() {
               </li>
               
               {user ? (
-                <>
-                  <li className="nav-item fw-semibold fs-5 me-1">
-                    <span className="nav-link title-color">{user.username}</span>
-                  </li>
-                  <li className="nav-item fw-semibold fs-5 me-1">
-                    <a href="#" className="nav-link title-color" onClick={handleLogout}>Logout</a>
-                  </li>
-                </>
+                <li className="nav-item dropdown fw-semibold fs-5 me-1">
+                  <a 
+                    className="nav-link dropdown-toggle title-color" 
+                    href="#" 
+                    id="userDropdown" 
+                    role="button" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false"
+                  >
+                    {user.username}
+                  </a>
+                  <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li>
+                      <NavLink to="/profile" className="dropdown-item">
+                        Profile
+                      </NavLink>
+                    </li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li>
+                      <a className="dropdown-item" href="#" onClick={handleLogout}>
+                        Logout
+                      </a>
+                    </li>
+                  </ul>
+                </li>
               ) : (
-                <>
-                  <li className="nav-item fw-semibold fs-5 me-1">
-                    <NavLink onClick={handleNavItemClick} to="/login" className={({ isActive }) => `nav-link title-color ${isActive ? 'text-primary' : ''}`}>
-                      Connexion
-                    </NavLink>
-                  </li>
-                  <li className="nav-item fw-semibold fs-5 me-1">
-                    <NavLink onClick={handleNavItemClick} to="/signup" className={({ isActive }) => `nav-link text-nowrap title-color ${isActive ? 'text-primary' : ''}`}>
-                      Nouveau Compte
-                    </NavLink>
-                  </li>
-                </>
+                <li className="nav-item dropdown fw-semibold fs-5 me-1">
+                  <a 
+                    className="nav-link dropdown-toggle title-color" 
+                    href="#" 
+                    id="authDropdown" 
+                    role="button" 
+                    data-bs-toggle="dropdown" 
+                    aria-expanded="false"
+                  >
+                    Compte
+                  </a>
+                  <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="authDropdown">
+                    <li>
+                      <NavLink onClick={handleNavItemClick} to="/login" className="dropdown-item">
+                        Connexion
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink onClick={handleNavItemClick} to="/signup" className="dropdown-item">
+                        Nouveau Compte
+                      </NavLink>
+                    </li>
+                  </ul>
+                </li>
               )}
             </ul>
           </div>
@@ -131,6 +161,7 @@ function App() {
           <Route path="/ludo" element={<LudoPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/login" element={<LoginPage refreshUser={refreshUser} />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </div>
 
