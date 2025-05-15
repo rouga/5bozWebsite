@@ -8,6 +8,7 @@ export default function RamiPage() {
   const [gameType, setGameType] = useState(''); // 'chkan' or 's7ab'
   const [gameState, setGameState] = useState(null); // Current active game
   const [status, setStatus] = useState(null);
+  const [loadingActiveGame, setLoadingActiveGame] = useState(false);
   
   // Round input state
   const [roundScores, setRoundScores] = useState({});
@@ -25,6 +26,24 @@ export default function RamiPage() {
   useEffect(() => {
     fetchScores();
   }, []);
+
+  // Check for active game when user logs in
+  useEffect(() => {
+    if (user) {
+      checkForActiveGame();
+    }
+  }, [user]);
+
+  // Auto-save game state when it changes
+  useEffect(() => {
+    if (gameState && user && gameState.type && (
+      (gameState.players && gameState.players.length > 0 && gameState.players[0].scores?.length > 0) ||
+      (gameState.teams && gameState.teams.length > 0 && gameState.teams[0].scores?.length > 0)
+    )) {
+      // Only save if the game has actual progress (rounds completed)
+      saveActiveGame();
+    }
+  }, [gameState, user]);
 
   const fetchScores = async () => {
     try {
@@ -47,6 +66,69 @@ export default function RamiPage() {
       console.error('Error fetching scores:', err);
       setError('Failed to load scores. Please try again later.');
       setLoading(false);
+    }
+  };
+
+  const checkForActiveGame = async () => {
+    if (!user) return;
+    
+    setLoadingActiveGame(true);
+    try {
+      const res = await fetch('http://192.168.0.12:5000/api/active-game', {
+        credentials: 'include'
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hasActiveGame) {
+          // Restore the game state
+          setGameState(data.gameState);
+          setGameType(data.gameType);
+          setShowForm(true);
+          setStatus({ 
+            type: 'info', 
+            message: `Restored your ${data.gameType === 'chkan' ? 'Chkan' : 'S7ab'} game from ${new Date(data.updatedAt).toLocaleString()}` 
+          });
+          
+          // Clear status after 5 seconds
+          setTimeout(() => setStatus(null), 5000);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking for active game:', err);
+    } finally {
+      setLoadingActiveGame(false);
+    }
+  };
+
+  const saveActiveGame = async () => {
+    if (!user || !gameState) return;
+    
+    try {
+      await fetch('http://192.168.0.12:5000/api/active-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameState: gameState,
+          gameType: gameType
+        }),
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Error saving game state:', err);
+    }
+  };
+
+  const deleteActiveGame = async () => {
+    if (!user) return;
+    
+    try {
+      await fetch('http://192.168.0.12:5000/api/active-game', {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Error deleting active game:', err);
     }
   };
 
@@ -274,6 +356,10 @@ export default function RamiPage() {
         const savedGame = await res.json();
         console.log('Game saved successfully:', savedGame); // Debug log
         setStatus({ type: 'success', message: 'Game completed successfully!' });
+        
+        // Delete active game after completion
+        await deleteActiveGame();
+        
         setGameState(null);
         setShowForm(false);
         setGameType('');
@@ -298,7 +384,10 @@ export default function RamiPage() {
   };
 
   // Cancel game
-  const cancelGame = () => {
+  const cancelGame = async () => {
+    // Delete active game when cancelled
+    await deleteActiveGame();
+    
     setGameState(null);
     setShowForm(false);
     setGameType('');
@@ -474,6 +563,11 @@ export default function RamiPage() {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h4 className="mb-0">
             {gameType === 'chkan' ? '🎯 Chkan Game' : '🤝 S7ab Game'}
+            {gameHasStarted() && (
+              <small className="text-muted ms-2">
+                (Auto-saved)
+              </small>
+            )}
           </h4>
           <button className="btn btn-outline-secondary btn-sm" onClick={cancelGame}>
             Cancel Game
@@ -548,6 +642,11 @@ export default function RamiPage() {
         {!allNamesProvided() && (
           <div className="alert alert-info">
             <strong>Instructions:</strong> Please fill in all {gameState.type === 'chkan' ? 'player' : 'team'} names before adding scores.
+            {gameHasStarted() && (
+              <div className="mt-2">
+                <small>✅ Your game progress is automatically saved. You can log out and resume later!</small>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -568,14 +667,21 @@ export default function RamiPage() {
             </div>
             <div className="card-body">
               {status && (
-                <div className={`alert alert-${status.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`} role="alert">
-                  {status.type === 'success' ? '✅' : '❌'} {status.message}
+                <div className={`alert alert-${status.type === 'success' ? 'success' : status.type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`} role="alert">
+                  {status.type === 'success' ? '✅' : status.type === 'error' ? '❌' : 'ℹ️'} {status.message}
                 </div>
               )}
 
               {user ? (
                 <div>
-                  {!showForm ? (
+                  {loadingActiveGame ? (
+                    <div className="text-center">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Checking for saved game...</span>
+                      </div>
+                      <p className="mt-2 text-muted">Checking for saved game...</p>
+                    </div>
+                  ) : !showForm ? (
                     <div className="text-center">
                       <p className="text-muted mb-3">Ready to start a new Rami game?</p>
                       <button 

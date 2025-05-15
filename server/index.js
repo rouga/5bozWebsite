@@ -27,6 +27,96 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Save or update active game state
+app.post('/api/active-game', async (req, res) => {
+  const userId = req.session.userId;
+  const { gameState, gameType } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in to save game state' });
+  }
+
+  if (!gameState || !gameType) {
+    return res.status(400).json({ error: 'Game state and type are required' });
+  }
+
+  try {
+    // Check if user already has an active game
+    const existingGame = await pool.query(
+      'SELECT id FROM active_games WHERE user_id = $1',
+      [userId]
+    );
+
+    if (existingGame.rows.length > 0) {
+      // Update existing game
+      const result = await pool.query(
+        'UPDATE active_games SET game_state = $1, game_type = $2, updated_at = NOW() WHERE user_id = $3 RETURNING *',
+        [JSON.stringify(gameState), gameType, userId]
+      );
+      res.json({ message: 'Game state updated', game: result.rows[0] });
+    } else {
+      // Create new active game
+      const result = await pool.query(
+        'INSERT INTO active_games (user_id, game_state, game_type) VALUES ($1, $2, $3) RETURNING *',
+        [userId, JSON.stringify(gameState), gameType]
+      );
+      res.json({ message: 'Game state saved', game: result.rows[0] });
+    }
+  } catch (err) {
+    console.error('Error saving active game:', err);
+    res.status(500).json({ error: 'Failed to save game state' });
+  }
+});
+
+// Get active game state
+app.get('/api/active-game', async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in to get game state' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM active_games WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ hasActiveGame: false });
+    }
+
+    const game = result.rows[0];
+    res.json({
+      hasActiveGame: true,
+      gameState: game.game_state,
+      gameType: game.game_type,
+      createdAt: game.created_at,
+      updatedAt: game.updated_at
+    });
+  } catch (err) {
+    console.error('Error getting active game:', err);
+    res.status(500).json({ error: 'Failed to get game state' });
+  }
+});
+
+// Delete active game state (when game is completed or cancelled)
+app.delete('/api/active-game', async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in to delete game state' });
+  }
+
+  try {
+    await pool.query('DELETE FROM active_games WHERE user_id = $1', [userId]);
+    res.json({ message: 'Active game state deleted' });
+  } catch (err) {
+    console.error('Error deleting active game:', err);
+    res.status(500).json({ error: 'Failed to delete game state' });
+  }
+});
+
 // Get scores with pagination
 app.get('/api/scores', async (req, res) => {
   // Get pagination parameters
