@@ -1,200 +1,3 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import useAuth from '../src/hooks/useAuth';
-
-export default function RamiPage() {
-  const [user] = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [gameType, setGameType] = useState(''); // 'chkan' or 's7ab'
-  const [gameState, setGameState] = useState(null); // Current active game
-  const [status, setStatus] = useState(null);
-  const [loadingActiveGame, setLoadingActiveGame] = useState(false);
-  
-  // Round input state
-  const [roundScores, setRoundScores] = useState({});
-  const [roundInputError, setRoundInputError] = useState(null);
-  
-  // History state
-  const [scores, setScores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const scoresPerPage = 10;
-
-  // Fetch scores on component mount
-  useEffect(() => {
-    fetchScores();
-  }, []);
-
-  // Check for active game when user logs in
-  useEffect(() => {
-    if (user) {
-      checkForActiveGame();
-    }
-  }, [user]);
-
-  // Auto-save game state when it changes
-  useEffect(() => {
-    if (gameState && user && gameState.type && (
-      (gameState.players && gameState.players.length > 0 && gameState.players[0].scores?.length > 0) ||
-      (gameState.teams && gameState.teams.length > 0 && gameState.teams[0].scores?.length > 0)
-    )) {
-      // Only save if the game has actual progress (rounds completed)
-      saveActiveGame();
-    }
-  }, [gameState, user]);
-
-  const fetchScores = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`http://192.168.0.12:5000/api/scores?page=${page}&limit=${scoresPerPage}`);
-      
-      if (!res.ok) {
-        throw new Error('Failed to fetch scores');
-      }
-      
-      const data = await res.json();
-      
-      if (data.length < scoresPerPage) {
-        setHasMore(false);
-      }
-      
-      setScores(prev => page === 1 ? data : [...prev, ...data]);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching scores:', err);
-      setError('Failed to load scores. Please try again later.');
-      setLoading(false);
-    }
-  };
-
-  const checkForActiveGame = async () => {
-    if (!user) return;
-    
-    setLoadingActiveGame(true);
-    try {
-      const res = await fetch('http://192.168.0.12:5000/api/active-game', {
-        credentials: 'include'
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hasActiveGame) {
-          // Restore the game state
-          setGameState(data.gameState);
-          setGameType(data.gameType);
-          setShowForm(true);
-          setStatus({ 
-            type: 'info', 
-            message: `Restored your ${data.gameType === 'chkan' ? 'Chkan' : 'S7ab'} game from ${new Date(data.updatedAt).toLocaleString()}` 
-          });
-          
-          // Clear status after 5 seconds
-          setTimeout(() => setStatus(null), 5000);
-        }
-      }
-    } catch (err) {
-      console.error('Error checking for active game:', err);
-    } finally {
-      setLoadingActiveGame(false);
-    }
-  };
-
-  const saveActiveGame = async () => {
-    if (!user || !gameState) return;
-    
-    try {
-      await fetch('http://192.168.0.12:5000/api/active-game', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          gameState: gameState,
-          gameType: gameType
-        }),
-        credentials: 'include'
-      });
-    } catch (err) {
-      console.error('Error saving game state:', err);
-    }
-  };
-
-  const deleteActiveGame = async () => {
-    if (!user) return;
-    
-    try {
-      await fetch('http://192.168.0.12:5000/api/active-game', {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-    } catch (err) {
-      console.error('Error deleting active game:', err);
-    }
-  };
-
-  const loadMore = () => {
-    setPage(prev => prev + 1);
-  };
-
-  useEffect(() => {
-    if (page > 1) {
-      fetchScores();
-    }
-  }, [page]);
-
-  // Initialize new game
-  const initializeGame = (type) => {
-    setGameType(type);
-    if (type === 'chkan') {
-      setGameState({
-        type: 'chkan',
-        players: [
-          { name: '', scores: [], totalScore: 0 },
-          { name: '', scores: [], totalScore: 0 }
-        ],
-        currentRound: 1,
-        isComplete: false
-      });
-    } else if (type === 's7ab') {
-      setGameState({
-        type: 's7ab',
-        teams: [
-          { name: '', scores: [], totalScore: 0 },
-          { name: '', scores: [], totalScore: 0 }
-        ],
-        currentRound: 1,
-        isComplete: false
-      });
-    }
-    setRoundScores({});
-    setRoundInputError(null);
-    setShowForm(true);
-  };
-
-  // Add player (Chkan only)
-  const addPlayer = () => {
-    if (gameState && gameState.players && gameState.players.length < 4) {
-      setGameState(prev => ({
-        ...prev,
-        players: [...prev.players, { name: '', scores: [], totalScore: 0 }]
-      }));
-    }
-  };
-
-  // Remove player (Chkan only)
-  const removePlayer = (index) => {
-    if (gameState && gameState.players && gameState.players.length > 2) {
-      setGameState(prev => ({
-        ...prev,
-        players: prev.players.filter((_, i) => i !== index)
-      }));
-      // Clear round scores for removed player
-      const newRoundScores = { ...roundScores };
-      delete newRoundScores[index];
-      setRoundScores(newRoundScores);
-    }
-  };
-
   // Update player/team name
   const updateName = (index, name) => {
     setGameState(prev => {
@@ -421,45 +224,59 @@ export default function RamiPage() {
     const entities = gameState.type === 'chkan' ? gameState.players : gameState.teams;
 
     return (
-      <div className="mt-4 p-3 bg-light rounded">
-        <h5>Round {gameState.currentRound} Scores</h5>
-        
-        {roundInputError && (
-          <div className="alert alert-danger alert-sm mb-3">
-            {roundInputError}
-          </div>
-        )}
-        
-        <div className="row g-2">
-          {entities.map((entity, index) => (
-            <div key={index} className="col-md-3">
-              <label className="form-label fw-bold">{entity.name}</label>
-              <input
-                type="number"
-                className="form-control"
-                value={roundScores[index] || ''}
-                onChange={(e) => handleRoundScoreChange(index, e.target.value)}
-                placeholder="Enter score"
-                min="0"
-              />
-            </div>
-          ))}
+      <div className="card border-0 shadow-sm mt-4">
+        <div className="card-header bg-primary text-white">
+          <h5 className="mb-0">
+            <i className="bi bi-dice-3 me-2"></i>
+            Round {gameState.currentRound} Scores
+          </h5>
         </div>
-        
-        <div className="mt-3">
-          <button 
-            className="btn btn-primary me-2" 
-            onClick={submitRound}
-            disabled={!roundScores || Object.keys(roundScores).length === 0}
-          >
-            Add Round {gameState.currentRound}
-          </button>
-          
-          {entities[0].scores.length > 0 && (
-            <button className="btn btn-success" onClick={finishGame}>
-              Finish Game
-            </button>
+        <div className="card-body p-4">
+          {roundInputError && (
+            <div className="alert alert-danger d-flex align-items-center mb-3">
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              {roundInputError}
+            </div>
           )}
+          
+          <div className="row g-3">
+            {entities.map((entity, index) => (
+              <div key={index} className="col-12 col-sm-6 col-lg-3">
+                <label className="form-label fw-semibold text-dark">{entity.name}</label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <i className="bi bi-trophy"></i>
+                  </span>
+                  <input
+                    type="number"
+                    className="form-control form-control-lg"
+                    value={roundScores[index] || ''}
+                    onChange={(e) => handleRoundScoreChange(index, e.target.value)}
+                    placeholder="Enter score"
+                    min="0"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="d-flex gap-3 mt-4">
+            <button 
+              className="btn btn-primary btn-lg flex-grow-1"
+              onClick={submitRound}
+              disabled={!roundScores || Object.keys(roundScores).length === 0}
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Add Round {gameState.currentRound}
+            </button>
+            
+            {entities[0].scores.length > 0 && (
+              <button className="btn btn-success btn-lg" onClick={finishGame}>
+                <i className="bi bi-check-circle me-2"></i>
+                Finish Game
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -477,39 +294,51 @@ export default function RamiPage() {
     const maxRounds = Math.max(...entities.map(entity => entity.scores.length));
 
     return (
-      <div className="table-responsive mb-4">
-        <table className="table table-bordered table-sm">
-          <thead className="table-light">
-            <tr>
-              <th>{gameState.type === 'chkan' ? 'Player' : 'Team'}</th>
-              {Array.from({ length: maxRounds }, (_, i) => (
-                <th key={i} className="text-center">R{i + 1}</th>
-              ))}
-              <th className="text-center fw-bold">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entities.map((entity, index) => (
-              <tr key={index}>
-                <td className="fw-bold">{entity.name}</td>
-                {entity.scores.map((score, roundIndex) => (
-                  <td key={roundIndex} className="text-center">
-                    {score}
-                  </td>
+      <div className="card border-0 shadow-sm mb-4">
+        <div className="card-header bg-light">
+          <h5 className="mb-0">
+            <i className="bi bi-table me-2"></i>
+            Score Progress
+          </h5>
+        </div>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover mb-0">
+              <thead className="bg-dark text-white">
+                <tr>
+                  <th className="py-3">{gameState.type === 'chkan' ? 'Player' : 'Team'}</th>
+                  {Array.from({ length: maxRounds }, (_, i) => (
+                    <th key={i} className="text-center py-3">R{i + 1}</th>
+                  ))}
+                  <th className="text-center py-3 fw-bold">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entities.map((entity, index) => (
+                  <tr key={index}>
+                    <td className="fw-semibold py-3">{entity.name}</td>
+                    {entity.scores.map((score, roundIndex) => (
+                      <td key={roundIndex} className="text-center py-3">
+                        <span className="badge bg-secondary">{score}</span>
+                      </td>
+                    ))}
+                    {/* Fill empty cells if this entity has fewer rounds */}
+                    {entity.scores.length < maxRounds && 
+                      Array.from({ length: maxRounds - entity.scores.length }, (_, i) => (
+                        <td key={`empty-${i}`} className="text-center py-3">–</td>
+                      ))
+                    }
+                    <td className="text-center py-3">
+                      <span className="badge bg-primary fs-6 fw-bold">
+                        {entity.totalScore}
+                      </span>
+                    </td>
+                  </tr>
                 ))}
-                {/* Fill empty cells if this entity has fewer rounds */}
-                {entity.scores.length < maxRounds && 
-                  Array.from({ length: maxRounds - entity.scores.length }, (_, i) => (
-                    <td key={`empty-${i}`} className="text-center">-</td>
-                  ))
-                }
-                <td className="text-center fw-bold bg-primary text-white">
-                  {entity.totalScore}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
@@ -519,33 +348,39 @@ export default function RamiPage() {
     if (!gameType) {
       return (
         <div className="text-center">
-          <h4 className="mb-4">Choose Rami Game Type</h4>
-          <div className="row justify-content-center">
-            <div className="col-md-4 mb-3">
-              <div className="card h-100">
-                <div className="card-body text-center">
-                  <h5 className="card-title">🎯 Chkan</h5>
-                  <p className="card-text">Individual play (2-4 players)</p>
-                  <p className="small text-muted">Winners: Players below 701 points</p>
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => initializeGame('chkan')}
-                  >
+          <h3 className="mb-4 fw-bold text-dark">Choose Game Type</h3>
+          <div className="row justify-content-center g-4">
+            <div className="col-12 col-md-6 col-lg-5">
+              <div className="card border-0 shadow-sm h-100 game-type-card" onClick={() => initializeGame('chkan')} style={{ cursor: 'pointer' }}>
+                <div className="card-body text-center p-4">
+                  <div className="mb-3">
+                    <span style={{ fontSize: '4rem' }}>🎯</span>
+                  </div>
+                  <h4 className="card-title fw-bold">Chkan</h4>
+                  <p className="card-text text-muted">Individual play (2-4 players)</p>
+                  <div className="small text-muted mb-3">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Winners: Players below 701 points
+                  </div>
+                  <button className="btn btn-primary btn-lg">
                     Start Chkan Game
                   </button>
                 </div>
               </div>
             </div>
-            <div className="col-md-4 mb-3">
-              <div className="card h-100">
-                <div className="card-body text-center">
-                  <h5 className="card-title">🤝 S7ab</h5>
-                  <p className="card-text">Team play (2 teams)</p>
-                  <p className="small text-muted">Winner: Team with lowest total score</p>
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => initializeGame('s7ab')}
-                  >
+            <div className="col-12 col-md-6 col-lg-5">
+              <div className="card border-0 shadow-sm h-100 game-type-card" onClick={() => initializeGame('s7ab')} style={{ cursor: 'pointer' }}>
+                <div className="card-body text-center p-4">
+                  <div className="mb-3">
+                    <span style={{ fontSize: '4rem' }}>🤝</span>
+                  </div>
+                  <h4 className="card-title fw-bold">S7ab</h4>
+                  <p className="card-text text-muted">Team play (2 teams)</p>
+                  <div className="small text-muted mb-3">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Winner: Team with lowest total score
+                  </div>
+                  <button className="btn btn-primary btn-lg">
                     Start S7ab Game
                   </button>
                 </div>
@@ -560,35 +395,44 @@ export default function RamiPage() {
 
     return (
       <div>
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4 className="mb-0">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h3 className="mb-0 fw-bold text-dark">
             {gameType === 'chkan' ? '🎯 Chkan Game' : '🤝 S7ab Game'}
             {gameHasStarted() && (
-              <small className="text-muted ms-2">
-                (Auto-saved)
+              <small className="text-success ms-2">
+                <i className="bi bi-cloud-check me-1"></i>
+                Auto-saved
               </small>
             )}
-          </h4>
-          <button className="btn btn-outline-secondary btn-sm" onClick={cancelGame}>
+          </h3>
+          <button className="btn btn-outline-danger" onClick={cancelGame}>
+            <i className="bi bi-x-circle me-1"></i>
             Cancel Game
           </button>
         </div>
 
         {/* Player/Team Setup - Hide after game starts */}
         {!gameHasStarted() && (
-          <div className="card mb-4">
-            <div className="card-header">
-              <h6 className="mb-0">{gameState.type === 'chkan' ? 'Players' : 'Teams'}</h6>
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-header bg-light">
+              <h5 className="mb-0">
+                <i className="bi bi-people me-2"></i>
+                {gameState.type === 'chkan' ? 'Players' : 'Teams'}
+              </h5>
             </div>
-            <div className="card-body">
+            <div className="card-body p-4">
               <div className="row g-3">
                 {gameState.type === 'chkan' ? (
                   gameState.players.map((player, index) => (
-                    <div key={index} className="col-md-3">
+                    <div key={index} className="col-12 col-sm-6 col-lg-3">
+                      <label className="form-label fw-semibold">Player {index + 1}</label>
                       <div className="input-group">
+                        <span className="input-group-text">
+                          <i className="bi bi-person"></i>
+                        </span>
                         <input
                           type="text"
-                          className="form-control"
+                          className="form-control form-control-lg"
                           placeholder={`Player ${index + 1}`}
                           value={player.name}
                           onChange={(e) => updateName(index, e.target.value)}
@@ -601,7 +445,7 @@ export default function RamiPage() {
                             type="button"
                             title="Remove player"
                           >
-                            ×
+                            <i className="bi bi-person-dash"></i>
                           </button>
                         )}
                       </div>
@@ -609,24 +453,33 @@ export default function RamiPage() {
                   ))
                 ) : (
                   gameState.teams.map((team, index) => (
-                    <div key={index} className="col-md-6">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder={`Team ${index + 1}`}
-                        value={team.name}
-                        onChange={(e) => updateName(index, e.target.value)}
-                        maxLength={50}
-                      />
+                    <div key={index} className="col-12 col-md-6">
+                      <label className="form-label fw-semibold">Team {index + 1}</label>
+                      <div className="input-group">
+                        <span className="input-group-text">
+                          <i className="bi bi-people"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control form-control-lg"
+                          placeholder={`Team ${index + 1}`}
+                          value={team.name}
+                          onChange={(e) => updateName(index, e.target.value)}
+                          maxLength={50}
+                        />
+                      </div>
                     </div>
                   ))
                 )}
               </div>
 
               {gameState.type === 'chkan' && gameState.players.length < 4 && (
-                <button className="btn btn-outline-primary mt-3" onClick={addPlayer}>
-                  + Add Player
-                </button>
+                <div className="mt-3">
+                  <button className="btn btn-outline-primary" onClick={addPlayer}>
+                    <i className="bi bi-person-plus me-2"></i>
+                    Add Player
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -640,55 +493,129 @@ export default function RamiPage() {
 
         {/* Instructions */}
         {!allNamesProvided() && (
-          <div className="alert alert-info">
-            <strong>Instructions:</strong> Please fill in all {gameState.type === 'chkan' ? 'player' : 'team'} names before adding scores.
-            {gameHasStarted() && (
-              <div className="mt-2">
-                <small>✅ Your game progress is automatically saved. You can log out and resume later!</small>
-              </div>
-            )}
+          <div className="alert alert-info d-flex align-items-center">
+            <i className="bi bi-info-circle me-2"></i>
+            <div>
+              <strong>Instructions:</strong> Please fill in all {gameState.type === 'chkan' ? 'player' : 'team'} names before adding scores.
+              {gameHasStarted() && (
+                <div className="mt-2">
+                  <small>✅ Your game progress is automatically saved. You can log out and resume later!</small>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
     );
   };
 
+  // Format game result for cards
+  const formatGameResult = (game) => {
+    if (game.type === 'chkan') {
+      return (
+        <div className="card border-0 shadow-sm h-100">
+          <div className="card-body p-3">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <span className="badge bg-info rounded-pill">🎯 Chkan</span>
+              <small className="text-muted">
+                {new Date(game.played_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </small>
+            </div>
+            <div className="mt-2">
+              <span className="text-success fw-medium small">WINNERS</span>
+              <div className="fw-semibold text-dark mt-1">
+                {game.winners || 'No winners'}
+              </div>
+            </div>
+            <div className="small text-muted mt-2 border-top pt-2">
+              {game.player_scores}
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      // S7ab game (legacy format)
+      return (
+        <div className="card border-0 shadow-sm h-100">
+          <div className="card-body p-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <span className="badge bg-success rounded-pill">🤝 S7ab</span>
+              <small className="text-muted">
+                {new Date(game.played_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </small>
+            </div>
+            <div className="row g-2">
+              <div className="col-5">
+                <div className="text-center p-2 bg-light rounded">
+                  <div className="fw-bold small text-muted">TEAM 1</div>
+                  <div className="fw-semibold small">{game.team1}</div>
+                  <div className="h6 mb-0 text-primary">{game.score1}</div>
+                </div>
+              </div>
+              <div className="col-2 d-flex align-items-center justify-content-center">
+                <span className="text-muted fw-bold">VS</span>
+              </div>
+              <div className="col-5">
+                <div className="text-center p-2 bg-light rounded">
+                  <div className="fw-bold small text-muted">TEAM 2</div>
+                  <div className="fw-semibold small">{game.team2}</div>
+                  <div className="h6 mb-0 text-primary">{game.score2}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
   return (
-    <div className="container mt-2">
+    <div className="container-fluid px-3 mt-4">
       <div className="row justify-content-center">
-        <div className="col-md-10 pb-4">
+        <div className="col-12 col-lg-10">
           {/* Score Entry Section */}
-          <div className="card shadow mb-4">
-            <div className="card-header bg-light">
-              <h2 className="mb-0">
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-header bg-white border-bottom-0 p-4">
+              <h1 className="h2 fw-bold text-dark mb-1">
                 <span className="me-2">♠️</span>
                 Rami Scores
-              </h2>
+              </h1>
+              <p className="text-muted mb-0">Create new games and track your progress</p>
             </div>
-            <div className="card-body">
+            <div className="card-body p-4">
               {status && (
-                <div className={`alert alert-${status.type === 'success' ? 'success' : status.type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`} role="alert">
-                  {status.type === 'success' ? '✅' : status.type === 'error' ? '❌' : 'ℹ️'} {status.message}
+                <div className={`alert alert-${status.type === 'success' ? 'success' : status.type === 'error' ? 'danger' : 'info'} d-flex align-items-center`}>
+                  <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : status.type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'} me-2`}></i>
+                  {status.message}
                 </div>
               )}
 
               {user ? (
                 <div>
                   {loadingActiveGame ? (
-                    <div className="text-center">
-                      <div className="spinner-border text-primary" role="status">
+                    <div className="text-center py-5">
+                      <div className="spinner-border text-primary mb-3" role="status">
                         <span className="visually-hidden">Checking for saved game...</span>
                       </div>
-                      <p className="mt-2 text-muted">Checking for saved game...</p>
+                      <p className="text-muted">Checking for saved game...</p>
                     </div>
                   ) : !showForm ? (
-                    <div className="text-center">
-                      <p className="text-muted mb-3">Ready to start a new Rami game?</p>
+                    <div className="text-center py-5">
+                      <div className="mb-3">
+                        <i className="bi bi-controller text-muted" style={{ fontSize: '4rem' }}></i>
+                      </div>
+                      <h4 className="text-muted mb-3">Ready to start a new Rami game?</h4>
                       <button 
-                        className="btn btn-primary btn-lg"
+                        className="btn btn-primary btn-lg px-4"
                         onClick={() => setShowForm(true)}
                       >
-                        <span className="me-2">+</span>
+                        <i className="bi bi-plus-circle me-2"></i>
                         Start New Game
                       </button>
                     </div>
@@ -697,15 +624,16 @@ export default function RamiPage() {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-5">
                   <div className="mb-3">
-                    <i className="bi bi-lock-fill text-muted" style={{ fontSize: '3rem' }}></i>
+                    <i className="bi bi-lock-fill text-muted" style={{ fontSize: '4rem' }}></i>
                   </div>
-                  <h5 className="text-muted">Login Required</h5>
+                  <h4 className="text-muted mb-3">Login Required</h4>
                   <p className="text-muted mb-3">
                     You need to be logged in to start new Rami games.
                   </p>
-                  <Link to="/login" className="btn btn-primary">
+                  <Link to="/login" className="btn btn-primary btn-lg">
+                    <i className="bi bi-box-arrow-in-right me-2"></i>
                     Login to Start Games
                   </Link>
                 </div>
@@ -714,79 +642,63 @@ export default function RamiPage() {
           </div>
 
           {/* History Section */}
-          <div className="card shadow">
-            <div className="card-header bg-light">
-              <h3 className="mb-1">
-                <span className="me-2">📋</span>
-                Game History
-              </h3>
+          <div className="card border-0 shadow-sm">
+            <div className="card-header bg-white border-bottom-0 p-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h2 className="h4 fw-bold text-dark mb-1">Recent Games</h2>
+                  <p className="text-muted mb-0">Latest game results</p>
+                </div>
+                <Link to="/rami/history" className="btn btn-outline-primary">
+                  <i className="bi bi-clock-history me-1"></i>
+                  View All
+                </Link>
+              </div>
             </div>
-            <div className="card-body">
+            <div className="card-body p-4">
               {error ? (
-                <div className="alert alert-danger" role="alert">
+                <div className="alert alert-danger d-flex align-items-center">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
                   {error}
                 </div>
               ) : scores.length === 0 && !loading ? (
-                <p className="text-muted text-center">No games recorded yet</p>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {scores.map(game => (
-                        <tr key={game.id}>
-                          <td>{new Date(game.played_at).toLocaleDateString()}</td>
-                          <td>
-                            <span className={`badge ${game.type === 'chkan' ? 'bg-info' : 'bg-success'}`}>
-                              {game.type === 'chkan' ? 'Chkan' : 'S7ab'}
-                            </span>
-                          </td>
-                          <td>
-                            {game.type === 'chkan' ? (
-                              <div>
-                                <strong>Winners:</strong> {game.winners}<br/>
-                                <small className="text-muted">{game.player_scores}</small>
-                              </div>
-                            ) : (
-                              <div>
-                                <strong>{game.team1}</strong> 
-                                <span className="badge bg-primary mx-2">{game.score1}</span>
-                                vs
-                                <span className="badge bg-primary mx-2">{game.score2}</span>
-                                <strong>{game.team2}</strong>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              
-              {loading && (
-                <div className="text-center my-3">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                <div className="text-center py-4">
+                  <div className="mb-3">
+                    <i className="bi bi-calendar-x text-muted" style={{ fontSize: '3rem' }}></i>
                   </div>
+                  <h5 className="text-muted">No games recorded yet</h5>
+                  <p className="text-muted">Start playing to see your games here!</p>
                 </div>
-              )}
-              
-              {hasMore && !loading && scores.length > 0 && (
-                <div className="text-center mt-3">
-                  <button 
-                    className="btn btn-outline-primary" 
-                    onClick={loadMore}
-                  >
-                    Load More
-                  </button>
-                </div>
+              ) : (
+                <>
+                  <div className="row g-3">
+                    {scores.map(game => (
+                      <div key={game.id} className="col-12 col-md-6 col-lg-4">
+                        {formatGameResult(game)}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {loading && (
+                    <div className="text-center my-4">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {hasMore && !loading && scores.length > 0 && (
+                    <div className="text-center mt-4">
+                      <button 
+                        className="btn btn-outline-primary btn-lg"
+                        onClick={loadMore}
+                      >
+                        <i className="bi bi-arrow-down-circle me-2"></i>
+                        Load More
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

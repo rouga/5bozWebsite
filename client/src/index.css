@@ -10,5 +10,256 @@ body {
 }
 
 .title-color {
-  color :rgb(94, 71, 21);
+  color: rgb(94, 71, 21);
+}
+
+/* Custom card hover effects */
+.game-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.game-type-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.game-type-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  border-color: #0d6efd;
+}
+
+/* Custom button styles for better mobile interaction */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* Enhanced form controls */
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.input-group .input-group-text {
+  border-color: #dee2e6;
+}
+
+.input-group .form-control {
+  border-color: #dee2e6;
+}
+
+.input-group .form-control:focus + .input-group-text,
+.input-group .input-group-text + .form-control:focus {
+  border-color: #0d6efd;
+}
+
+/* Custom badge styles */
+.badge {
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* Enhanced table styles */
+.table th {
+  border-top: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile-first responsive typography */
+@media (max-width: 768px) {
+  .display-4 {
+    font-size: 2rem;
+  }
+  
+  .h2 {
+    font-size: 1.75rem;
+  }
+  
+  .h3 {
+    font-size: 1.5rem;
+  }
+  
+  .h4 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Loading spinner customization */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Card animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+/* Improved spacing for mobile */
+@media (max-width: 576px) {
+  .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .card-body {
+    padding: 1.5rem !important;
+  }
+  
+  .btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Custom alert styles */
+.alert {
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.alert-success {
+  background-color: #d1e7dd;
+  color: #0a3622;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #58151c;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  color: #055160;
+}
+
+/* Enhanced navigation */
+.navbar-toggler {
+  border: none;
+  padding: 0.25rem 0.5rem;
+}
+
+.navbar-toggler:focus {
+  box-shadow: none;
+}
+
+/* Improved dropdown menu */
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 0.5rem;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  margin: 0.125rem 0.5rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* Tab button styling */
+.btn-check:checked + .btn {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.btn-check:checked + .btn:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+/* Footer styling */
+footer {
+  margin-top: auto;
+}
+
+/* Ensure minimum height for main content */
+.min-vh-100 {
+  min-height: 100vh;
+}
+
+/* Custom focus states for better accessibility */
+.btn:focus-visible,
+.form-control:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* Enhanced table responsiveness */
+.table-responsive {
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+/* Smooth transitions for interactive elements */
+.nav-link,
+.dropdown-item,
+.card {
+  transition: all 0.2s ease;
+}
+
+/* Better visual hierarchy */
+.text-muted {
+  color: #6c757d !important;
+}
+
+.fw-semibold {
+  font-weight: 600 !important;
+}
+
+/* Custom spacing utilities */
+.gap-3 {
+  gap: 1rem !important;
+}
+
+.gap-4 {
+  gap: 1.5rem !important;
 }

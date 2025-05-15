@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState(null);
 
   // Fetch user data when component mounts
-  useState(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       try {
         const res = await fetch('http://192.168.0.12:5000/api/me', {
@@ -104,15 +104,19 @@ export default function ProfilePage() {
     } catch (err) {
       setStatus({ type: 'error', message: 'Network error. Please try again later.' });
     }
+
+    // Hide the alert after 5 seconds
+    setTimeout(() => setStatus(null), 5000);
   };
 
   if (user.loading) {
     return (
-      <div className="container mt-5">
-        <div className="d-flex justify-content-center">
-          <div className="spinner-border" role="status">
+      <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center">
+        <div className="text-center">
+          <div className="spinner-border text-primary mb-3" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
+          <h5 className="text-muted">Loading profile...</h5>
         </div>
       </div>
     );
@@ -121,117 +125,190 @@ export default function ProfilePage() {
   if (user.error) {
     return (
       <div className="container mt-5">
-        <div className="alert alert-danger">
-          {user.error}
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="alert alert-danger d-flex align-items-center">
+              <i className="bi bi-exclamation-triangle-fill me-2"></i>
+              {user.error}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mt-5">
-      <div className="row">
-        <div className="col-md-8 offset-md-2">
-          <div className="card">
-            <div className="card-header bg-primary text-white">
-              <h3 className="card-title mb-0">Profile</h3>
-            </div>
-            <div className="card-body">
-              <div className="row mb-4">
-                <div className="col-md-4">
-                  <div className="text-center">
-                    <div className="mb-3">
-                      <div className="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" style={{ width: '100px', height: '100px', fontSize: '2.5rem' }}>
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                    <h4>{user.username}</h4>
+    <div className="container-fluid mt-5 px-3">
+      <div className="row justify-content-center">
+        <div className="col-12 col-lg-8 col-xl-6">
+          <div className="card border-0 shadow-lg">
+            {/* Header */}
+            <div className="card-header bg-primary text-white border-0 p-4">
+              <div className="d-flex align-items-center">
+                <div className="me-3">
+                  <div className="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" 
+                       style={{ width: '60px', height: '60px', fontSize: '1.8rem' }}>
+                    <i className="bi bi-person-fill"></i>
                   </div>
                 </div>
-                <div className="col-md-8">
-                  <h5 className="border-bottom pb-2">Account Details</h5>
-                  
-                  <div className="mb-3">
-                    <strong>Username:</strong> {user.username}
+                <div>
+                  <h2 className="h3 mb-1 fw-bold">Profile</h2>
+                  <p className="mb-0 opacity-75">Manage your account settings</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-body p-4">
+              {/* Status Messages */}
+              {status && (
+                <div className={`alert alert-${status.type === 'success' ? 'success' : 'danger'} d-flex align-items-center mb-4`}>
+                  <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
+                  {status.message}
+                </div>
+              )}
+
+              {/* Profile Section */}
+              <div className="row">
+                <div className="col-12 col-md-4 text-center mb-4 mb-md-0">
+                  <div className="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                       style={{ width: '120px', height: '120px', fontSize: '3rem' }}>
+                    <i className="bi bi-person text-muted"></i>
                   </div>
+                  <h3 className="h4 fw-bold">{user.username}</h3>
+                  <p className="text-muted">5BOZ Player</p>
+                </div>
+
+                <div className="col-12 col-md-8">
+                  <h4 className="h5 fw-bold mb-3 text-dark">Account Details</h4>
                   
+                  {/* Username Display */}
+                  <div className="card bg-light border-0 mb-4">
+                    <div className="card-body p-3">
+                      <label className="form-label fw-semibold text-muted small">USERNAME</label>
+                      <div className="d-flex align-items-center">
+                        <i className="bi bi-person-badge text-primary me-2"></i>
+                        <span className="h5 mb-0">{user.username}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Section */}
                   {!isEditing ? (
-                    <button 
-                      className="btn btn-outline-primary"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      Change Password
-                    </button>
-                  ) : (
-                    <div className="mt-3">
-                      <h5 className="border-bottom pb-2">Change Password</h5>
-                      
-                      {status?.type === 'success' && (
-                        <div className="alert alert-success">{status.message}</div>
-                      )}
-                      {status?.type === 'error' && (
-                        <div className="alert alert-danger">{status.message}</div>
-                      )}
-                      
-                      <form onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                          <label htmlFor="currentPassword" className="form-label">Current Password</label>
-                          <input 
-                            type="password" 
-                            className="form-control" 
-                            id="currentPassword"
-                            name="currentPassword" 
-                            value={form.currentPassword} 
-                            onChange={handleChange} 
-                            required 
-                          />
-                        </div>
-                        
-                        <div className="mb-3">
-                          <label htmlFor="newPassword" className="form-label">New Password</label>
-                          <input 
-                            type="password" 
-                            className="form-control" 
-                            id="newPassword"
-                            name="newPassword" 
-                            value={form.newPassword} 
-                            onChange={handleChange} 
-                            required 
-                          />
-                        </div>
-                        
-                        <div className="mb-3">
-                          <label htmlFor="confirmNewPassword" className="form-label">Confirm New Password</label>
-                          <input 
-                            type="password" 
-                            className="form-control" 
-                            id="confirmNewPassword"
-                            name="confirmNewPassword" 
-                            value={form.confirmNewPassword} 
-                            onChange={handleChange} 
-                            required 
-                          />
-                        </div>
-                        
-                        <div className="d-flex gap-2">
-                          <button type="submit" className="btn btn-primary">Save Changes</button>
+                    <div className="card bg-light border-0">
+                      <div className="card-body p-3">
+                        <label className="form-label fw-semibold text-muted small">PASSWORD</label>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div className="d-flex align-items-center">
+                            <i className="bi bi-shield-lock text-primary me-2"></i>
+                            <span className="text-muted">••••••••</span>
+                          </div>
                           <button 
-                            type="button" 
-                            className="btn btn-secondary"
-                            onClick={() => {
-                              setIsEditing(false);
-                              setForm({
-                                currentPassword: '',
-                                newPassword: '',
-                                confirmNewPassword: ''
-                              });
-                              setStatus(null);
-                            }}
+                            className="btn btn-primary btn-sm"
+                            onClick={() => setIsEditing(true)}
                           >
-                            Cancel
+                            <i className="bi bi-pencil-square me-1"></i>
+                            Change Password
                           </button>
                         </div>
-                      </form>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="card border-0 shadow-sm">
+                      <div className="card-header bg-light border-0">
+                        <h5 className="mb-0">
+                          <i className="bi bi-shield-lock me-2"></i>
+                          Change Password
+                        </h5>
+                      </div>
+                      <div className="card-body p-4">
+                        <form onSubmit={handleSubmit}>
+                          <div className="mb-4">
+                            <label htmlFor="currentPassword" className="form-label fw-semibold">Current Password</label>
+                            <div className="input-group">
+                              <span className="input-group-text bg-light">
+                                <i className="bi bi-lock text-muted"></i>
+                              </span>
+                              <input 
+                                type="password" 
+                                className="form-control" 
+                                id="currentPassword"
+                                name="currentPassword" 
+                                value={form.currentPassword} 
+                                onChange={handleChange} 
+                                placeholder="Enter current password"
+                                required 
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="mb-4">
+                            <label htmlFor="newPassword" className="form-label fw-semibold">New Password</label>
+                            <div className="input-group">
+                              <span className="input-group-text bg-light">
+                                <i className="bi bi-key text-muted"></i>
+                              </span>
+                              <input 
+                                type="password" 
+                                className="form-control" 
+                                id="newPassword"
+                                name="newPassword" 
+                                value={form.newPassword} 
+                                onChange={handleChange} 
+                                placeholder="Enter new password"
+                                required 
+                              />
+                            </div>
+                            <div className="form-text">
+                              <small className="text-muted">
+                                <i className="bi bi-info-circle me-1"></i>
+                                At least 6 characters required
+                              </small>
+                            </div>
+                          </div>
+                          
+                          <div className="mb-4">
+                            <label htmlFor="confirmNewPassword" className="form-label fw-semibold">Confirm New Password</label>
+                            <div className="input-group">
+                              <span className="input-group-text bg-light">
+                                <i className="bi bi-check-circle text-muted"></i>
+                              </span>
+                              <input 
+                                type="password" 
+                                className="form-control" 
+                                id="confirmNewPassword"
+                                name="confirmNewPassword" 
+                                value={form.confirmNewPassword} 
+                                onChange={handleChange} 
+                                placeholder="Confirm new password"
+                                required 
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="d-flex gap-3">
+                            <button type="submit" className="btn btn-success flex-grow-1">
+                              <i className="bi bi-check-circle me-2"></i>
+                              Save Changes
+                            </button>
+                            <button 
+                              type="button" 
+                              className="btn btn-outline-secondary"
+                              onClick={() => {
+                                setIsEditing(false);
+                                setForm({
+                                  currentPassword: '',
+                                  newPassword: '',
+                                  confirmNewPassword: ''
+                                });
+                                setStatus(null);
+                              }}
+                            >
+                              <i className="bi bi-x-circle me-1"></i>
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -64,28 +64,28 @@ export default function RamiHistoryPage() {
       
       return (
         <div className="mt-3">
-          <h6>Round Details:</h6>
+          <h6 className="text-muted mb-3">Round Details</h6>
           <div className="table-responsive">
             <table className="table table-sm table-bordered">
-              <thead className="table-light">
+              <thead className="bg-light">
                 <tr>
-                  <th>Player</th>
+                  <th className="fw-semibold">Player</th>
                   {Array.from({ length: maxRounds }, (_, i) => (
-                    <th key={i} className="text-center">R{i + 1}</th>
+                    <th key={i} className="text-center fw-semibold">R{i + 1}</th>
                   ))}
-                  <th className="text-center">Total</th>
+                  <th className="text-center fw-semibold">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {players.map((player, index) => (
                   <tr key={index}>
-                    <td className="fw-bold">{player.name}</td>
+                    <td className="fw-medium">{player.name}</td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
-                        {player.scores[roundIndex] || '-'}
+                        {player.scores[roundIndex] || '–'}
                       </td>
                     ))}
-                    <td className="text-center fw-bold">
+                    <td className="text-center fw-bold bg-primary text-white">
                       {player.totalScore || player.scores.reduce((a, b) => a + b, 0)}
                     </td>
                   </tr>
@@ -102,28 +102,28 @@ export default function RamiHistoryPage() {
       
       return (
         <div className="mt-3">
-          <h6>Round Details:</h6>
+          <h6 className="text-muted mb-3">Round Details</h6>
           <div className="table-responsive">
             <table className="table table-sm table-bordered">
-              <thead className="table-light">
+              <thead className="bg-light">
                 <tr>
-                  <th>Team</th>
+                  <th className="fw-semibold">Team</th>
                   {Array.from({ length: maxRounds }, (_, i) => (
-                    <th key={i} className="text-center">R{i + 1}</th>
+                    <th key={i} className="text-center fw-semibold">R{i + 1}</th>
                   ))}
-                  <th className="text-center">Total</th>
+                  <th className="text-center fw-semibold">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {teams.map((team, index) => (
                   <tr key={index}>
-                    <td className="fw-bold">{team.name}</td>
+                    <td className="fw-medium">{team.name}</td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
-                        {team.scores[roundIndex] || '-'}
+                        {team.scores[roundIndex] || '–'}
                       </td>
                     ))}
-                    <td className="text-center fw-bold">
+                    <td className="text-center fw-bold bg-primary text-white">
                       {team.totalScore || team.scores.reduce((a, b) => a + b, 0)}
                     </td>
                   </tr>
@@ -136,16 +136,28 @@ export default function RamiHistoryPage() {
     }
   };
 
-  // Function to format game result for display
+  // Function to format game result for card display
   const formatGameResult = (game) => {
     if (game.type === 'chkan') {
       return (
         <div>
-          <span className="badge bg-info me-2">Chkan</span>
-          <div className="mt-1">
-            <strong>Winners:</strong> {game.winners || 'No winners'}
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <span className="badge bg-info rounded-pill">🎯 Chkan</span>
+            <small className="text-muted">
+              {new Date(game.played_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </small>
           </div>
-          <div className="small text-muted mt-1">
+          <div className="mt-2">
+            <span className="text-success fw-medium">Winners:</span>
+            <div className="fw-semibold text-dark mt-1">
+              {game.winners || 'No winners'}
+            </div>
+          </div>
+          <div className="small text-muted mt-2">
             {game.player_scores}
           </div>
         </div>
@@ -154,16 +166,33 @@ export default function RamiHistoryPage() {
       // S7ab game (legacy format)
       return (
         <div>
-          <span className="badge bg-success me-2">S7ab</span>
-          <div className="d-flex justify-content-between align-items-center mt-1">
-            <div>
-              <span className="fw-bold me-2">{game.team1}</span>
-              <span className="badge bg-primary rounded-pill">{game.score1}</span>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span className="badge bg-success rounded-pill">🤝 S7ab</span>
+            <small className="text-muted">
+              {new Date(game.played_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </small>
+          </div>
+          <div className="row g-2">
+            <div className="col-5">
+              <div className="text-center p-2 bg-light rounded">
+                <div className="fw-bold small text-muted">TEAM 1</div>
+                <div className="fw-semibold">{game.team1}</div>
+                <div className="h5 mb-0 text-primary">{game.score1}</div>
+              </div>
             </div>
-            <span className="mx-2">vs</span>
-            <div>
-              <span className="badge bg-primary rounded-pill">{game.score2}</span>
-              <span className="fw-bold ms-2">{game.team2}</span>
+            <div className="col-2 d-flex align-items-center justify-content-center">
+              <span className="text-muted fw-medium">VS</span>
+            </div>
+            <div className="col-5">
+              <div className="text-center p-2 bg-light rounded">
+                <div className="fw-bold small text-muted">TEAM 2</div>
+                <div className="fw-semibold">{game.team2}</div>
+                <div className="h5 mb-0 text-primary">{game.score2}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -192,7 +221,8 @@ export default function RamiHistoryPage() {
   if (error) {
     return (
       <div className="container mt-5">
-        <div className="alert alert-danger" role="alert">
+        <div className="alert alert-danger alert-modern" role="alert">
+          <i className="bi bi-exclamation-triangle-fill text-danger me-2"></i>
           {error}
         </div>
       </div>
@@ -200,95 +230,107 @@ export default function RamiHistoryPage() {
   }
 
   return (
-    <div className="container mt-5">
+    <div className="container-fluid mt-4 px-3">
       <div className="row justify-content-center">
-        <div className="col-md-12">
-          <div className="card shadow">
-            <div className="card-header bg-light">
-              <h2 className="mb-0">
-                <span className="me-2">♠️</span>
-                Complete Rami History
-              </h2>
+        <div className="col-12 col-lg-10">
+          {/* Modern Header */}
+          <div className="mb-4">
+            <h1 className="h2 fw-bold text-dark mb-1">
+              <span className="me-2">♠️</span>
+              Game History
+            </h1>
+            <p className="text-muted mb-0">Complete record of all Rami games</p>
+          </div>
+
+          {/* Game Cards */}
+          {scores.length === 0 && !loading ? (
+            <div className="text-center py-5">
+              <div className="mb-3">
+                <i className="bi bi-calendar-x text-muted" style={{ fontSize: '3rem' }}></i>
+              </div>
+              <h5 className="text-muted">No games recorded yet</h5>
+              <p className="text-muted">Start playing to see your game history here!</p>
             </div>
-            <div className="card-body">
-              {scores.length === 0 && !loading ? (
-                <p className="text-muted text-center">No games recorded yet</p>
-              ) : (
-                <div className="accordion" id="gameHistoryAccordion">
-                  {scores.map(game => {
-                    const details = getGameDetails(game);
-                    const isExpanded = expandedGame === game.id;
-                    
-                    return (
-                      <div key={game.id} className="accordion-item">
-                        <h6 className="accordion-header" id={`heading${game.id}`}>
-                          <button
-                            className={`accordion-button ${isExpanded ? '' : 'collapsed'}`}
-                            type="button"
-                            onClick={() => toggleExpanded(game.id)}
-                            aria-expanded={isExpanded}
-                          >
-                            <div className="d-flex justify-content-between w-100 me-3">
-                              <div>
-                                <span className="me-3">{new Date(game.played_at).toLocaleDateString()}</span>
-                                <span className={`badge ${game.type === 'chkan' ? 'bg-info' : 'bg-success'} me-2`}>
-                                  {game.type === 'chkan' ? 'Chkan' : 'S7ab'}
-                                </span>
-                              </div>
-                              <div className="text-end">
-                                {game.type === 'chkan' ? (
-                                  <span className="text-muted">
-                                    Winners: {game.winners || 'No winners'}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted">
-                                    {game.team1} ({game.score1}) vs {game.team2} ({game.score2})
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        </h6>
-                        {isExpanded && (
-                          <div className="accordion-collapse show">
-                            <div className="accordion-body">
-                              {renderGameDetails(game)}
-                              {details && (
-                                <div className="mt-3 text-muted">
-                                  <small>
-                                    <strong>Game Summary:</strong> {details.rounds} rounds completed
-                                  </small>
-                                </div>
+          ) : (
+            <div className="row g-3">
+              {scores.map(game => {
+                const details = getGameDetails(game);
+                const isExpanded = expandedGame === game.id;
+                
+                return (
+                  <div key={game.id} className="col-12">
+                    <div className="card shadow-sm border-0 game-card">
+                      <div 
+                        className="card-body p-3 cursor-pointer"
+                        onClick={() => toggleExpanded(game.id)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {formatGameResult(game)}
+                        
+                        {details && (
+                          <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <small className="text-muted">
+                              <i className="bi bi-dice-3 me-1"></i>
+                              {details.rounds} round{details.rounds !== 1 ? 's' : ''} completed
+                            </small>
+                            <button 
+                              className="btn btn-sm btn-outline-primary border-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpanded(game.id);
+                              }}
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <i className="bi bi-chevron-up me-1"></i>
+                                  Hide Details
+                                </>
+                              ) : (
+                                <>
+                                  <i className="bi bi-chevron-down me-1"></i>
+                                  Show Details
+                                </>
                               )}
-                            </div>
+                            </button>
                           </div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-              
-              {loading && (
-                <div className="text-center my-3">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                      
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="card-footer bg-light border-top-0 p-3">
+                          {renderGameDetails(game)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              {hasMore && !loading && scores.length > 0 && (
-                <div className="text-center mt-3">
-                  <button 
-                    className="btn btn-outline-primary" 
-                    onClick={loadMore}
-                  >
-                    Load More
-                  </button>
-                </div>
-              )}
+                );
+              })}
             </div>
-          </div>
+          )}
+          
+          {/* Loading Spinner */}
+          {loading && (
+            <div className="text-center my-4">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="text-muted mt-2 mb-0">Loading games...</p>
+            </div>
+          )}
+          
+          {/* Load More Button */}
+          {hasMore && !loading && scores.length > 0 && (
+            <div className="text-center mt-4 mb-4">
+              <button 
+                className="btn btn-outline-primary btn-lg px-4"
+                onClick={loadMore}
+              >
+                <i className="bi bi-arrow-down-circle me-2"></i>
+                Load More Games
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
