@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router
 import { useRef, useState, useEffect } from 'react';
 import HomePage from './../pages/HomePage';
 import RamiPage from '../pages/RamiPage';
+import RamiHistoryPage from '../pages/RamiHistoryPage';
 import JakiPage from '../pages/JakiPage';
 import LudoPage from '../pages/LudoPage';
 import SignupPage from '../pages/SignupPage';
@@ -157,6 +158,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/rami" element={<RamiPage />} />
+          <Route path="/rami/history" element={<RamiHistoryPage />} />
           <Route path="/jaki" element={<JakiPage />} />
           <Route path="/ludo" element={<LudoPage />} />
           <Route path="/signup" element={<SignupPage />} />

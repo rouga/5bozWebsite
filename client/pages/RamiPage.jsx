@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function RamiPage() {
   const [form, setForm] = useState({
@@ -44,11 +45,14 @@ export default function RamiPage() {
       <div className="row justify-content-center">
         <div className="col-md-8">
           <div className="card shadow">
-            <div className="card-header bg-light">
+            <div className="card-header bg-light d-flex justify-content-between align-items-center">
               <h2 className="mb-0">
                 <span className="me-2">♠️</span>
                 Add New Rami Score
               </h2>
+              <Link to="/rami/history" className="btn btn-outline-primary btn-sm">
+                Voir l'historique complet
+              </Link>
             </div>
             <div className="card-body">
               {status === 'success' && (
@@ -122,7 +126,7 @@ export default function RamiPage() {
               </form>
             </div>
             <div className="card-footer text-muted">
-              <p className="mb-0">Scores will be displayed on the homepage</p>
+              <p className="mb-0">Les 5 derniers scores seront affichés sur la page d'accueil</p>
             </div>
           </div>
         </div>

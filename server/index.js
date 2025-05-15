@@ -27,9 +27,40 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Get scores with pagination
 app.get('/api/scores', async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM games ORDER BY played_at DESC');
-  res.json(rows);
+  // Get pagination parameters
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  
+  try {
+    let query = 'SELECT * FROM games ORDER BY played_at DESC';
+    let params = [];
+    
+    // If limit is provided, add pagination
+    if (req.query.limit) {
+      query += ' LIMIT $1 OFFSET $2';
+      params = [limit, offset];
+    }
+    
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching scores:', err);
+    res.status(500).json({ error: 'Failed to fetch scores' });
+  }
+});
+
+// Get total count of scores
+app.get('/api/scores/count', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT COUNT(*) FROM games');
+    res.json({ count: parseInt(rows[0].count) });
+  } catch (err) {
+    console.error('Error counting scores:', err);
+    res.status(500).json({ error: 'Failed to count scores' });
+  }
 });
 
 app.post('/api/scores', async (req, res) => {

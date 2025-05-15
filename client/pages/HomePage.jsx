@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 function HomePage() {
   const [scores, setScores] = useState([]);
@@ -19,6 +20,9 @@ function HomePage() {
       console.error('Error fetching scores:', error);
     }
   };
+
+  // Get only the 5 most recent scores
+  const latestScores = scores.slice(0, 5);
 
   return (
     <div className="container">
@@ -67,12 +71,17 @@ function HomePage() {
             <div className="card-body">
               {activeTab === 'rami' && (
                 <div>
-                  <h3 className="card-title">Rami Scores</h3>
-                  {scores.length === 0 ? (
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h3 className="card-title mb-0">Derniers Scores Rami</h3>
+                    <Link to="/rami/history" className="btn btn-outline-primary btn-sm">
+                      Voir tout l'historique
+                    </Link>
+                  </div>
+                  {latestScores.length === 0 ? (
                     <p className="text-muted">No scores available yet</p>
                   ) : (
                     <ul className="list-group list-group-flush">
-                      {scores.map(game => (
+                      {latestScores.map(game => (
                         <li key={game.id} className="list-group-item d-flex justify-content-between align-items-center">
                           <div>
                             <span className="fw-bold me-2">{game.team1}</span>
