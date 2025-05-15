@@ -45,21 +45,29 @@ app.post('/api/scores', async (req, res) => {
 app.post('/api/signup', async (req, res) => {
   const { username, password, code } = req.body;
 
+  // Check for password length
   if (password.length < 6) {
     return res.status(403).json({ error: 'Password should contain at least 6 characters' });
   }
 
+  // Check username length
   if (username.length > 20) {
     return res.status(403).json({ error: 'Username too long' });
   }
 
+  // Check if username starts with a number
+  if (/^[0-9]/.test(username)) {
+    return res.status(403).json({ error: 'Username cannot start with a number' });
+  }
 
+  // Check signup code
   if (code !== process.env.SIGNUP_SECRET) {
     return res.status(403).json({ error: 'Invalid signup code' });
   }
 
   try {
-    const existing = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    // Check for existing username (case insensitive)
+    const existing = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Username already exists' });
     }
