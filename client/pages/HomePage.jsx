@@ -24,6 +24,51 @@ function HomePage() {
   // Get only the 5 most recent scores
   const latestScores = scores.slice(0, 5);
 
+  // Function to format game result for display
+  const formatGameResult = (game) => {
+    if (game.type === 'chkan') {
+      return (
+        <div>
+          <div className="d-flex justify-content-between align-items-center">
+            <span className="badge bg-info me-2">Chkan</span>
+            <small className="text-muted">
+              {new Date(game.played_at).toLocaleDateString()}
+            </small>
+          </div>
+          <div className="mt-1">
+            <strong>Winners:</strong> {game.winners || 'No winners'}
+          </div>
+          <div className="small text-muted">
+            {game.player_scores}
+          </div>
+        </div>
+      );
+    } else {
+      // S7ab game (legacy format)
+      return (
+        <div>
+          <div className="d-flex justify-content-between align-items-center">
+            <span className="badge bg-success me-2">S7ab</span>
+            <small className="text-muted">
+              {new Date(game.played_at).toLocaleDateString()}
+            </small>
+          </div>
+          <div className="d-flex justify-content-between align-items-center mt-1">
+            <div>
+              <span className="fw-bold me-2">{game.team1}</span>
+              <span className="badge bg-primary rounded-pill">{game.score1}</span>
+            </div>
+            <span className="mx-2">vs</span>
+            <div>
+              <span className="badge bg-primary rounded-pill">{game.score2}</span>
+              <span className="fw-bold ms-2">{game.team2}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="container">
       <div className="row justify-content-center">
@@ -72,32 +117,21 @@ function HomePage() {
               {activeTab === 'rami' && (
                 <div>
                   <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h3 className="card-title mb-0">Derniers Scores Rami</h3>
+                    <h3 className="card-title mb-0">Latest Rami Games</h3>
                     <Link to="/rami/history" className="btn btn-outline-primary btn-sm">
                       Voir tout l'historique
                     </Link>
                   </div>
                   {latestScores.length === 0 ? (
-                    <p className="text-muted">No scores available yet</p>
+                    <p className="text-muted">No games recorded yet</p>
                   ) : (
-                    <ul className="list-group list-group-flush">
+                    <div className="list-group list-group-flush">
                       {latestScores.map(game => (
-                        <li key={game.id} className="list-group-item d-flex justify-content-between align-items-center">
-                          <div>
-                            <span className="fw-bold me-2">{game.team1}</span>
-                            <span className="badge bg-primary rounded-pill">{game.score1}</span>
-                          </div>
-                          <span className="mx-2">vs</span>
-                          <div>
-                            <span className="badge bg-primary rounded-pill">{game.score2}</span>
-                            <span className="fw-bold ms-2">{game.team2}</span>
-                          </div>
-                          <small className="text-muted ms-2">
-                            {new Date(game.played_at).toLocaleDateString()}
-                          </small>
-                        </li>
+                        <div key={game.id} className="list-group-item">
+                          {formatGameResult(game)}
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
               )}
