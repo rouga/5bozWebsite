@@ -79,7 +79,7 @@ const GameCard = ({ game }) => {
       <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <span className="badge bg-info rounded-pill">🎯 Chkan</span>
+            <span className="badge bg-info rounded-pill">🧍‍♂️ Chkan</span>
             <div className="text-end">
               <small className="text-muted d-block">
                 {new Date(game.played_at).toLocaleDateString('en-US', {
@@ -138,7 +138,7 @@ const GameCard = ({ game }) => {
       <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <span className="badge bg-success rounded-pill">🤝 S7ab</span>
+            <span className="badge bg-success rounded-pill">👬 S7ab</span>
             <div className="text-end">
               <small className="text-muted d-block">
                 {new Date(game.played_at).toLocaleDateString('en-US', {

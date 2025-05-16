@@ -67,8 +67,8 @@ export default function LoginPage({ refreshUser }) {
                 <div className="mb-3">
                   <img src="/favIcon.svg" alt="5BOZ Logo" width={60} height={60} />
                 </div>
-                <h1 className="h3 fw-bold text-dark mb-1">Welcome Back</h1>
-                <p className="text-muted">Sign in to your 5BOZ account</p>
+                <h1 className="h3 fw-bold text-dark mb-1">Mar7ba ya 5obza</h1>
+                <p className="text-muted">Connectez-vous à votre compte 5BOZ</p>
               </div>
 
               {/* Status Messages */}
@@ -77,11 +77,11 @@ export default function LoginPage({ refreshUser }) {
               {/* Login Form */}
               <form onSubmit={handleSubmit}>
                 <FormInput
-                  label="Username"
+                  label="Nom d'utilisateur"
                   name="username"
                   value={form.username}
                   onChange={handleChange}
-                  placeholder="Enter your username"
+                  placeholder="Entrer nom d'utilisateur"
                   required
                   autoComplete="username"
                   icon="bi-person"
@@ -89,12 +89,12 @@ export default function LoginPage({ refreshUser }) {
                 />
 
                 <FormInput
-                  label="Password"
+                  label="Mot de passe"
                   type="password"
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder="Entrer mot de passe"
                   required
                   autoComplete="current-password"
                   icon="bi-lock"
@@ -109,12 +109,12 @@ export default function LoginPage({ refreshUser }) {
                   {loading ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Signing in...
+                      Connexion...
                     </>
                   ) : (
                     <>
                       <i className="bi bi-box-arrow-in-right me-2"></i>
-                      Sign In
+                      Se connecter
                     </>
                   )}
                 </button>
@@ -123,9 +123,9 @@ export default function LoginPage({ refreshUser }) {
               {/* Footer */}
               <div className="text-center">
                 <p className="text-muted mb-0">
-                  Don't have an account? 
+                  Ma 3endekch compte ?
                   <a href="/signup" className="text-decoration-none ms-1 fw-semibold">
-                    Create one here
+                    T3ala mena
                   </a>
                 </p>
               </div>

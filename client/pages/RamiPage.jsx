@@ -17,7 +17,7 @@ export default function RamiPage() {
   const [user] = useAuth();
   const [gameState, setGameState] = useState(null);
   const [gameCreatedAt, setGameCreatedAt] = useState(null);
-  const [gameTime, setGameTime] = useState(new Date()); // Add this for real-time updates
+  const [gameTime, setGameTime] = useState(new Date()); 
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingActiveGame, setLoadingActiveGame] = useState(true);
@@ -72,7 +72,7 @@ export default function RamiPage() {
     if (completedRounds === 0) {
       return (
         <div className="text-center py-3">
-          <p className="text-muted mb-0">No rounds completed yet.</p>
+          <p className="text-muted mb-0">Aucun tour terminé.</p>
         </div>
       );
     }
@@ -86,7 +86,7 @@ export default function RamiPage() {
           <table className="table table-sm table-bordered">
             <thead className="bg-light">
               <tr>
-                <th className="fw-semibold">Player</th>
+                <th className="fw-semibold">Joueur</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
                   <th key={i} className="text-center fw-semibold">R{i + 1}</th>
                 ))}
@@ -120,7 +120,7 @@ export default function RamiPage() {
           <table className="table table-sm table-bordered">
             <thead className="bg-light">
               <tr>
-                <th className="fw-semibold">Team</th>
+                <th className="fw-semibold">Equipe</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
                   <th key={i} className="text-center fw-semibold">R{i + 1}</th>
                 ))}
@@ -446,53 +446,53 @@ export default function RamiPage() {
     if (!gameType) {
       return (
         <div className="text-center">
-          <h3 className="mb-4 fw-bold text-dark">Choose Game Type</h3>
+          <h3 className="mb-4 fw-bold text-dark">Choisissez le type de jeu</h3>
           <div className="row justify-content-center g-4">
             <div className="col-12 col-md-6 col-lg-5">
               <GameTypeCard
                 title="Chkan"
-                icon="🎯"
-                description="Individual play"
+                icon="🧍‍♂️"
+                description="Jeu individuel"
                 onClick={() => initializeGame('chkan', numberOfPlayers)}
               >
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Number of Players</label>
+                  <label className="form-label fw-semibold">Nombre de joueurs</label>
                   <select 
                     className="form-select form-select-sm w-auto mx-auto"
                     value={numberOfPlayers}
                     onChange={(e) => setNumberOfPlayers(parseInt(e.target.value))}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <option value={2}>2 Players</option>
-                    <option value={3}>3 Players</option>
-                    <option value={4}>4 Players</option>
+                    <option value={2}>2 Joueurs</option>
+                    <option value={3}>3 Joueurs</option>
+                    <option value={4}>4 Joueurs</option>
                   </select>
                 </div>
                 
                 <div className="small text-muted mb-3">
                   <i className="bi bi-info-circle me-1"></i>
-                  Winners: Players below 701 points
+                  Gagnants : joueurs avec moins de 701 points
                 </div>
                 <button className="btn btn-primary btn-lg">
                   <i className="bi bi-play-circle me-2"></i>
-                  Start Chkan Game
+                  Commencer partie Chkan
                 </button>
               </GameTypeCard>
             </div>
             <div className="col-12 col-md-6 col-lg-5">
               <GameTypeCard
                 title="S7ab"
-                icon="🤝"
-                description="Team play (2 teams)"
+                icon="👬"
+                description="Jeu en équipe (2 équipes)"
                 onClick={() => initializeGame('s7ab')}
               >
                 <div className="small text-muted mb-3">
                   <i className="bi bi-info-circle me-1"></i>
-                  Winner: Team with lowest total score
+                  Gagnant : Équipe avec le score total le plus bas
                 </div>
                 <button className="btn btn-primary btn-lg">
                   <i className="bi bi-play-circle me-2"></i>
-                  Start S7ab Game
+                  Commencer partie S7ab
                 </button>
               </GameTypeCard>
             </div>
@@ -512,14 +512,14 @@ export default function RamiPage() {
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h5 className="mb-1">
-                  {gameType === 'chkan' ? '🎯 Chkan Game' : '🤝 S7ab Game'}
+                  {gameType === 'chkan' ? '🧍‍♂️Jeu Chkan' : '👬 Jeu S7ab'}
                 </h5>
                 <div className="small">
                   <span className="me-3">
                     <i className="bi bi-arrow-repeat me-1"></i>
-                    Round {gameState.currentRound}
+                    Tours {gameState.currentRound}
                     {completedRounds > 0 && (
-                      <span className="ms-1">({completedRounds} completed)</span>
+                      <span className="ms-1">({completedRounds} complétés)</span>
                     )}
                   </span>
                   {duration && (
@@ -721,16 +721,16 @@ export default function RamiPage() {
         <div className="col-12 col-lg-10">
           {/* Main Header */}
           <PageHeader
-            title="Rami Game Center"
-            subtitle="Track your Rami game scores and compete with friends"
+            title="Section Rami"
+            subtitle="Créez et suivez les scores de jeu Rami entre 5boz"
             icon="♠️"
             gradient={true}
           />
 
           {/* Score Entry Section */}
           <SectionCard
-            title="Game Management"
-            subtitle="Create new games and track your progress"
+            title="Gestion des jeux"
+            subtitle="Créez de nouveaux jeux"
             icon="bi-controller"
           >
             <StatusAlert status={status} className="mb-4" />
@@ -738,19 +738,19 @@ export default function RamiPage() {
             {user ? (
               <div>
                 {loadingActiveGame ? (
-                  <LoadingSpinner text="Checking for saved game..." className="py-5" />
+                  <LoadingSpinner text="Vérification de la partie sauvegardée..." className="py-5" />
                 ) : !showForm ? (
                   <EmptyState
                     icon="bi-controller"
-                    title="Ready to start a new Rami game?"
-                    description="Choose between Chkan (individual) or S7ab (team) gameplay"
+                    title="Prêt à commencer une nouvelle partie de Rami ?"
+                    description="Choisissez entre Chkan (individuel) ou S7ab (équipe)"
                     action={
                       <button 
                         className="btn btn-primary btn-lg px-4"
                         onClick={() => setShowForm(true)}
                       >
                         <i className="bi bi-plus-circle me-2"></i>
-                        Start New Game
+                        Démarrer le jeu
                       </button>
                     }
                   />
@@ -766,7 +766,7 @@ export default function RamiPage() {
                 action={
                   <Link to="/login" className="btn btn-primary btn-lg">
                     <i className="bi bi-box-arrow-in-right me-2"></i>
-                    Login to Start Games
+                    Connectez-vous pour démarrer les jeux
                   </Link>
                 }
               />
@@ -775,13 +775,13 @@ export default function RamiPage() {
 
           {/* History Section */}
           <SectionCard
-            title="Recent Games"
-            subtitle="Latest game results and standings"
+            title="Jeux récents"
+            subtitle="Derniers résultats et classements des matchs"
             icon="bi-clock-history"
             actions={
               <Link to="/rami/history" className="btn btn-outline-primary">
                 <i className="bi bi-clock-history me-1"></i>
-                View All History
+                Voir tout l'historique
               </Link>
             }
           >
@@ -790,8 +790,8 @@ export default function RamiPage() {
             ) : scores.length === 0 && !loading ? (
               <EmptyState
                 icon="bi-calendar-x"
-                title="No games recorded yet"
-                description="Start playing to see your games here!"
+                title="Aucune partie ajoutée pour le moment"
+                description="Commencez à jouer pour voir vos jeux ici !"
               />
             ) : (
               <>
@@ -804,7 +804,7 @@ export default function RamiPage() {
                 </div>
                 
                 {loading && (
-                  <LoadingSpinner text="Loading games..." className="my-4" />
+                  <LoadingSpinner text="Chargement des parties..." className="my-4" />
                 )}
                 
                 {hasMore && !loading && scores.length > 0 && (
@@ -814,7 +814,7 @@ export default function RamiPage() {
                       onClick={loadMore}
                     >
                       <i className="bi bi-arrow-down-circle me-2"></i>
-                      Load More Games
+                      Charger plus de parties
                     </button>
                   </div>
                 )}

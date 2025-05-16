@@ -51,8 +51,8 @@ export default function SignupPage() {
                 <div className="mb-3">
                   <img src="/favIcon.svg" alt="5BOZ Logo" width={60} height={60} />
                 </div>
-                <h1 className="h3 fw-bold text-dark mb-1">Create Account</h1>
-                <p className="text-muted">Join the 5BOZ gaming community</p>
+                <h1 className="h3 fw-bold text-dark mb-1">5obza y7el fi compte</h1>
+                <p className="text-muted">Rejoignez la communauté de joueurs 5BOZ</p>
               </div>
 
               {/* Status Messages */}
@@ -61,34 +61,34 @@ export default function SignupPage() {
               {/* Signup Form */}
               <form onSubmit={handleSubmit}>
                 <FormInput
-                  label="Username"
+                  label="Nom d'utilisateur"
                   name="username"
                   value={form.username}
                   onChange={handleChange}
-                  placeholder="Choose a username"
+                  placeholder="Choisir nom d'utilisateur"
                   required
                   autoComplete="username"
                   icon="bi-person"
                   size="large"
-                  helpText="Max 20 characters, cannot start with a number"
+                  helpText="Max 20 caractères, ne peut pas commencer par un chiffre"
                 />
 
                 <FormInput
-                  label="Password"
+                  label="Mot de passe"
                   type="password"
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  placeholder="Create a password"
+                  placeholder="Créer un mot de passe"
                   required
                   autoComplete="new-password"
                   icon="bi-lock"
                   size="large"
-                  helpText="At least 6 characters"
+                  helpText="Au moins 6 caractères"
                 />
 
                 <FormInput
-                  label="Secret Code"
+                  label="Code secret"
                   type="password"
                   name="code"
                   value={form.code}
@@ -98,7 +98,7 @@ export default function SignupPage() {
                   autoComplete="off"
                   icon="bi-key"
                   size="large"
-                  helpText="You need an invitation code to create an account"
+                  helpText="Lazmek code bech t7el compte ya 5obza"
                 />
 
                 <button 
@@ -109,12 +109,12 @@ export default function SignupPage() {
                   {loading ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Creating account...
+                      Création de compte...
                     </>
                   ) : (
                     <>
                       <i className="bi bi-person-plus me-2"></i>
-                      Create Account
+                      Créer un compte
                     </>
                   )}
                 </button>
@@ -123,9 +123,9 @@ export default function SignupPage() {
               {/* Footer */}
               <div className="text-center">
                 <p className="text-muted mb-0">
-                  Already have an account? 
+                  Déja 3endek compte ?
                   <a href="/login" className="text-decoration-none ms-1 fw-semibold">
-                    Sign in here
+                    Haya mena
                   </a>
                 </p>
               </div>

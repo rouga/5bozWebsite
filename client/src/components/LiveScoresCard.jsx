@@ -141,15 +141,15 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           <div className="card-body p-3">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div className="d-flex align-items-center">
-                <span className="badge bg-info me-2">🎯 Chkan</span>
-                <span className="fw-semibold">{game.username}'s Game</span>
+                <span className="badge bg-info me-2">🧍‍♂️ Chkan</span>
+                <span className="fw-semibold">Crée par {game.username}</span>
               </div>
               <div className="text-end">
                 <div className="text-muted small">
-                  Round {currentRound}
+                  Tours {currentRound}
                   {totalRounds > 0 && (
                     <span className="ms-1">
-                      ({totalRounds} completed)
+                      ({totalRounds} complétés)
                     </span>
                   )}
                 </div>
@@ -200,12 +200,12 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                   {isExpanded ? (
                     <>
                       <i className="bi bi-chevron-up me-1"></i>
-                      Hide Round Details
+                      Masquer les détails
                     </>
                   ) : (
                     <>
                       <i className="bi bi-chevron-down me-1"></i>
-                      Show Round Details
+                      Afficher les détails
                     </>
                   )}
                 </button>
@@ -216,7 +216,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           {/* Expanded Details */}
           {isExpanded && (
             <div className="card-footer bg-light">
-              <h6 className="text-muted mb-2">Round-by-Round Scores</h6>
+              <h6 className="text-muted mb-2">Scores tour par tour</h6>
               {renderRoundDetails(gameData, gameType)}
             </div>
           )}
@@ -238,15 +238,15 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           <div className="card-body p-3">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div className="d-flex align-items-center">
-                <span className="badge bg-success me-2">🤝 S7ab</span>
-                <span className="fw-semibold">{game.username}'s Game</span>
+                <span className="badge bg-success me-2">👬 S7ab</span>
+                <span className="fw-semibold">Crée par {game.username}</span>
               </div>
               <div className="text-end">
                 <div className="text-muted small">
-                  Round {currentRound}
+                  Tours {currentRound}
                   {totalRounds > 0 && (
                     <span className="ms-1">
-                      ({totalRounds} completed)
+                      ({totalRounds} complétés)
                     </span>
                   )}
                 </div>
@@ -295,12 +295,12 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                   {isExpanded ? (
                     <>
                       <i className="bi bi-chevron-up me-1"></i>
-                      Hide Round Details
+                      Masquer les détails
                     </>
                   ) : (
                     <>
                       <i className="bi bi-chevron-down me-1"></i>
-                      Show Round Details
+                      Afficher les détails
                     </>
                   )}
                 </button>
@@ -311,7 +311,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           {/* Expanded Details */}
           {isExpanded && (
             <div className="card-footer bg-light">
-              <h6 className="text-muted mb-2">Round-by-Round Scores</h6>
+              <h6 className="text-muted mb-2">Scores tour par tour</h6>
               {renderRoundDetails(gameData, gameType)}
             </div>
           )}
@@ -326,9 +326,9 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     return (
       <div className="text-center py-4">
         <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading live games...</span>
+          <span className="visually-hidden">Chargement des Jeux en direct...</span>
         </div>
-        <p className="text-muted mt-2 mb-0">Loading live games...</p>
+        <p className="text-muted mt-2 mb-0">Chargement des Jeux en direct...</p>
       </div>
     );
   }
@@ -348,9 +348,9 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
         <div className="mb-3">
           <i className="bi bi-controller text-muted" style={{ fontSize: '3rem' }}></i>
         </div>
-        <h6 className="text-muted">No active games at the moment</h6>
+        <h6 className="text-muted">Aucun jeu actif pour le moment</h6>
         <p className="text-muted small mb-0">
-          Start a new game to see live scores here!
+          Commencez une nouvelle partie pour voir les scores en direct ici !
         </p>
       </div>
     );
@@ -363,7 +363,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
         <div className="text-center mt-3">
           <small className="text-muted">
             <i className="bi bi-arrow-clockwise me-1"></i>
-            Updates automatically every 30 seconds
+            Mise à jour automatique toutes les 30 secondes
           </small>
         </div>
       )}

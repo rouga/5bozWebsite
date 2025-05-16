@@ -169,7 +169,7 @@ function App() {
 
       <footer className="bg-light text-center py-3 border-top">
         <div className="container">
-          <p className="mb-0">&copy; {new Date().getFullYear()} 5BOZ. All rights reserved.</p>
+          <p className="mb-0">&copy; {new Date().getFullYear()} 5BOZ. Tous droits réservés.</p>
         </div>
       </footer>
     </div>

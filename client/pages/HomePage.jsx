@@ -90,8 +90,8 @@ function HomePage() {
 
           {/* Live Scores Section */}
           <SectionCard
-            title="🔴 Live Games"
-            subtitle="Games currently in progress"
+            title="🔴 Jeux en direct"
+            subtitle="Jeux en cours"
             className="mb-4"
           >
             <LiveScoresCard 
