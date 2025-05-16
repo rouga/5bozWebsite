@@ -1,7 +1,37 @@
 // client/src/components/LiveScoresCard.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Utility function to calculate game duration
+const calculateDuration = (createdAt, currentTime) => {
+  const startTime = new Date(createdAt);
+  const now = currentTime || new Date();
+  const diffMs = now - startTime;
+  
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
+  }
+};
 
 const LiveScoresCard = ({ activeGames, loading, error }) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every second for real-time duration updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const renderActiveGame = (game, index) => {
     if (!game.gameState) return null;
 
@@ -9,9 +39,13 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
       ? JSON.parse(game.gameState) 
       : game.gameState;
 
-    if (game.gameType === 'chkan') {
+    const gameType = game.gameType;
+    const duration = calculateDuration(game.createdAt, currentTime);
+
+    if (gameType === 'chkan') {
       const players = gameData.players || [];
       const currentRound = gameData.currentRound || 1;
+      const totalRounds = players.length > 0 ? players[0].scores.length : 0;
       
       // Sort players by current score
       const sortedPlayers = [...players].sort((a, b) => {
@@ -28,12 +62,19 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 <span className="badge bg-info me-2">🎯 Chkan</span>
                 <span className="fw-semibold">{game.username}'s Game</span>
               </div>
-              <div className="text-muted small">
-                Round {currentRound}
-                <span className="ms-2">
-                  <i className="bi bi-clock"></i>
-                  <span className="ms-1">Live</span>
-                </span>
+              <div className="text-end">
+                <div className="text-muted small">
+                  Round {currentRound}
+                  {totalRounds > 0 && (
+                    <span className="ms-1">
+                      ({totalRounds} completed)
+                    </span>
+                  )}
+                </div>
+                <div className="text-muted small">
+                  <i className="bi bi-clock me-1"></i>
+                  {duration}
+                </div>
               </div>
             </div>
             
@@ -57,12 +98,22 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 );
               })}
             </div>
+
+            {/* Show additional info for more than 4 players */}
+            {sortedPlayers.length > 4 && (
+              <div className="text-center mt-2">
+                <small className="text-muted">
+                  +{sortedPlayers.length - 4} more player{sortedPlayers.length - 4 > 1 ? 's' : ''}
+                </small>
+              </div>
+            )}
           </div>
         </div>
       );
-    } else if (game.gameType === 's7ab') {
+    } else if (gameType === 's7ab') {
       const teams = gameData.teams || [];
       const currentRound = gameData.currentRound || 1;
+      const totalRounds = teams.length > 0 ? teams[0].scores.length : 0;
       
       if (teams.length < 2) return null;
 
@@ -78,12 +129,19 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 <span className="badge bg-success me-2">🤝 S7ab</span>
                 <span className="fw-semibold">{game.username}'s Game</span>
               </div>
-              <div className="text-muted small">
-                Round {currentRound}
-                <span className="ms-2">
-                  <i className="bi bi-clock"></i>
-                  <span className="ms-1">Live</span>
-                </span>
+              <div className="text-end">
+                <div className="text-muted small">
+                  Round {currentRound}
+                  {totalRounds > 0 && (
+                    <span className="ms-1">
+                      ({totalRounds} completed)
+                    </span>
+                  )}
+                </div>
+                <div className="text-muted small">
+                  <i className="bi bi-clock me-1"></i>
+                  {duration}
+                </div>
               </div>
             </div>
             
@@ -163,7 +221,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
         <div className="text-center mt-3">
           <small className="text-muted">
             <i className="bi bi-arrow-clockwise me-1"></i>
-            Updates in real-time every 30 seconds
+            Updates automatically every 30 seconds
           </small>
         </div>
       )}

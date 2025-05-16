@@ -16,6 +16,8 @@ import { gameAPI, handleApiError } from '../src/utils/api';
 export default function RamiPage() {
   const [user] = useAuth();
   const [gameState, setGameState] = useState(null);
+  const [gameCreatedAt, setGameCreatedAt] = useState(null);
+  const [gameTime, setGameTime] = useState(new Date()); // Add this for real-time updates
   const [scores, setScores] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingActiveGame, setLoadingActiveGame] = useState(true);
@@ -30,6 +32,38 @@ export default function RamiPage() {
   const [numberOfPlayers, setNumberOfPlayers] = useState(3);
   const scoresPerPage = 5;
 
+  // Calculate game duration
+  const calculateDuration = () => {
+    if (!gameCreatedAt) return '';
+    
+    const startTime = new Date(gameCreatedAt);
+    const now = gameTime; // Use the state variable for real-time updates
+    const diffMs = now - startTime;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  // Get total completed rounds
+  const getCompletedRounds = () => {
+    if (!gameState) return 0;
+    
+    if (gameType === 'chkan') {
+      return gameState.players.length > 0 ? gameState.players[0].scores.length : 0;
+    } else {
+      return gameState.teams.length > 0 ? gameState.teams[0].scores.length : 0;
+    }
+  };
+
   useEffect(() => {
     fetchScores();
     if (user) {
@@ -38,6 +72,19 @@ export default function RamiPage() {
       setLoadingActiveGame(false);
     }
   }, [user]);
+
+  // Add real-time duration updates
+  useEffect(() => {
+    let interval;
+    if (gameCreatedAt) {
+      interval = setInterval(() => {
+        setGameTime(new Date());
+      }, 1000); // Update every second
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [gameCreatedAt]);
 
   const fetchScores = async () => {
     try {
@@ -65,6 +112,7 @@ export default function RamiPage() {
       if (data.hasActiveGame) {
         setGameState(data.gameState);
         setGameType(data.gameType);
+        setGameCreatedAt(data.createdAt);
         setShowForm(true);
         initializeRoundScores(data.gameState);
       }
@@ -117,6 +165,7 @@ export default function RamiPage() {
     
     setGameState(initialState);
     setGameType(type);
+    setGameCreatedAt(new Date().toISOString());
     initializeRoundScores(initialState);
   };
 
@@ -255,6 +304,7 @@ export default function RamiPage() {
       // Reset game state
       setGameState(null);
       setGameType('');
+      setGameCreatedAt(null);
       setShowForm(false);
       setRoundScores({});
       
@@ -278,6 +328,7 @@ export default function RamiPage() {
       await gameAPI.deleteActiveGame();
       setGameState(null);
       setGameType('');
+      setGameCreatedAt(null);
       setShowForm(false);
       setRoundScores({});
       setStatus({ type: 'info', message: 'Game cancelled.' });
@@ -357,6 +408,9 @@ export default function RamiPage() {
       );
     }
 
+    const completedRounds = getCompletedRounds();
+    const duration = calculateDuration();
+
     return (
       <div>
         {/* Game Progress Header */}
@@ -367,7 +421,21 @@ export default function RamiPage() {
                 <h5 className="mb-1">
                   {gameType === 'chkan' ? '🎯 Chkan Game' : '🤝 S7ab Game'}
                 </h5>
-                <small>Round {gameState.currentRound}</small>
+                <div className="small">
+                  <span className="me-3">
+                    <i className="bi bi-arrow-repeat me-1"></i>
+                    Round {gameState.currentRound}
+                    {completedRounds > 0 && (
+                      <span className="ms-1">({completedRounds} completed)</span>
+                    )}
+                  </span>
+                  {duration && (
+                    <span>
+                      <i className="bi bi-clock me-1"></i>
+                      Duration: {duration}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <button 
