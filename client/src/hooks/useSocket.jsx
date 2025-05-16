@@ -15,7 +15,6 @@ export default function useSocket() {
 
       // Wait for connection before emitting user_login
       socketRef.current.on('connect', () => {
-        console.log('Socket connected:', socketRef.current.id);
         socketRef.current.emit('user_login', user.id);
       });
 

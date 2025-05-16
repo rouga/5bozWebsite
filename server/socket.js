@@ -1,3 +1,4 @@
+// server/socket.js - Clean version
 const { Server } = require('socket.io');
 const { Pool } = require('pg');
 
@@ -17,23 +18,16 @@ function initializeSocket(server) {
   const userSockets = new Map();
 
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
     // When user logs in, associate socket with user ID
     socket.on('user_login', (userId) => {
-      console.log(`User ${userId} attempting to associate with socket ${socket.id}`);
-      
       // Remove any existing socket for this user
       const existingSocketId = userSockets.get(userId);
       if (existingSocketId && existingSocketId !== socket.id) {
-        console.log(`Replacing existing socket ${existingSocketId} for user ${userId}`);
+        userSockets.delete(userId);
       }
       
       userSockets.set(userId, socket.id);
       socket.userId = userId;
-      
-      console.log(`User ${userId} successfully connected with socket ${socket.id}`);
-      console.log(`Total connected users: ${userSockets.size}`);
       
       // Confirm the login to the client
       socket.emit('user_login_confirmed', { 
@@ -73,14 +67,10 @@ function initializeSocket(server) {
           return;
         }
 
-        console.log(`User ${invitation.invited_username} ${response} invitation for game ${invitation.game_id}`);
-
         // Notify the game creator about the response
         const creatorSocketId = userSockets.get(invitation.invited_by);
-        console.log(`Looking for creator socket: user ${invitation.invited_by}, socket ${creatorSocketId}`);
         
         if (creatorSocketId) {
-          console.log(`Sending response to creator at socket ${creatorSocketId}`);
           io.to(creatorSocketId).emit('invitation_response', {
             invitationId,
             response,
@@ -88,8 +78,6 @@ function initializeSocket(server) {
             playerName: invitation.invited_username,
             teamSlot: invitation.team_slot
           });
-        } else {
-          console.log(`Creator not found online for user ${invitation.invited_by}`);
         }
 
         // Send confirmation to the player who responded
@@ -108,15 +96,10 @@ function initializeSocket(server) {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
-      
       // Remove user from socket map
       if (socket.userId) {
-        console.log(`Removing user ${socket.userId} from socket map`);
         userSockets.delete(socket.userId);
       }
-      
-      console.log(`Total connected users: ${userSockets.size}`);
     });
   });
 

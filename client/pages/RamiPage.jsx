@@ -1,9 +1,8 @@
-// client/pages/RamiPage.jsx - Refactored and simplified
+// client/pages/RamiPage.jsx - Full clean version with modifications
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../src/hooks/useAuth';
 import useSocket from '../src/hooks/useSocket';
-import GameInvitationModal from '../src/components/GameInvitationModal';
 import { 
   GameCard, 
   LoadingSpinner, 
@@ -57,8 +56,6 @@ export default function RamiPage() {
   // Invitation system state
   const [playerAcceptanceStatus, setPlayerAcceptanceStatus] = useState({});
   const [currentGameId, setCurrentGameId] = useState(null);
-  const [showInvitationModal, setShowInvitationModal] = useState(false);
-  const [currentInvitation, setCurrentInvitation] = useState(null);
   const [allInvitationsAccepted, setAllInvitationsAccepted] = useState(false);
   
   // History state
@@ -67,14 +64,9 @@ export default function RamiPage() {
   const [hasMore, setHasMore] = useState(true);
   const scoresPerPage = 5;
 
-  // Socket event handlers
+  // Socket event handlers - Only for invitation responses (not receiving invitations)
   useEffect(() => {
     if (!socket) return;
-
-    socket.on('game_invitation', (invitation) => {
-      setCurrentInvitation(invitation);
-      setShowInvitationModal(true);
-    });
 
     socket.on('invitation_response', (data) => {
       const { gameId, playerName, teamSlot, response } = data;
@@ -95,7 +87,6 @@ export default function RamiPage() {
     });
 
     return () => {
-      socket.off('game_invitation');
       socket.off('invitation_response');
     };
   }, [socket, currentGameId]);
@@ -263,12 +254,6 @@ export default function RamiPage() {
   };
 
   // Event handlers
-  const handleInvitationResponse = async (invitationId, response) => {
-    if (!socket) return;
-    
-    socket.emit('respond_to_invitation', { invitationId, response });
-  };
-
   const handleSelectGameType = (type) => {
     setGameType(type);
     if (type === 'chkan') {
@@ -733,18 +718,6 @@ export default function RamiPage() {
     <div className="container-fluid px-3 mt-4">
       <div className="row justify-content-center">
         <div className="col-12 col-lg-10">
-          {/* Game Invitation Modal */}
-          {showInvitationModal && currentInvitation && (
-            <GameInvitationModal
-              invitation={currentInvitation}
-              onRespond={handleInvitationResponse}
-              onClose={() => {
-                setShowInvitationModal(false);
-                setCurrentInvitation(null);
-              }}
-            />
-          )}
-
           {/* Main Header */}
           <PageHeader
             title="Section Rami"

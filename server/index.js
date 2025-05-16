@@ -14,11 +14,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
+  name: 'gameSession', // Custom session name
   cookie: {
-    secure: false, // true if using HTTPS
+    secure: false, // Set to true only in production with HTTPS
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 12 // 12 hours
-  }
+    maxAge: 1000 * 60 * 60 * 12, // 12 hours
+    sameSite: 'lax' // Important for cross-origin requests
+  },
+  // Add session store if using Redis or MongoDB in production
+  // For now, using in-memory store (not recommended for production)
 }));
 
 app.use(express.json());
@@ -40,7 +44,7 @@ app.locals.userSockets = userSockets;
 
 // Game invitation endpoints
 
-// Send game invitations to registered players
+// Also update your existing endpoint with better debugging
 app.post('/api/game-invitations', async (req, res) => {
   const userId = req.session.userId;
   const { gameType, players, gameId } = req.body;
@@ -116,6 +120,154 @@ app.post('/api/game-invitations', async (req, res) => {
     console.error('Error sending game invitations:', error);
     res.status(500).json({ error: 'Failed to send invitations' });
   }
+});
+
+// Add a session check endpoint
+app.get('/api/session-check', (req, res) => {
+  res.json({
+    sessionId: req.sessionID,
+    session: req.session,
+    userId: req.session.userId,
+    cookies: req.headers.cookie
+  });
+});
+
+// Send game invitations with detailed logging
+app.post('/api/game-invitations', async (req, res) => {
+  const userId = req.session.userId;
+  const { gameType, players, gameId } = req.body;
+
+  console.log('=== INVITATION DEBUG START ===');
+  console.log('User ID:', userId);
+  console.log('Game Type:', gameType);
+  console.log('Players:', JSON.stringify(players, null, 2));
+  console.log('Game ID:', gameId);
+
+  if (!userId) {
+    console.log('ERROR: User not logged in');
+    return res.status(401).json({ error: 'Must be logged in to send invitations' });
+  }
+
+  try {
+    const invitations = [];
+    console.log('Processing players for invitations...');
+    
+    for (const [index, player] of players.entries()) {
+      console.log(`\nProcessing player ${index + 1}:`, player);
+      
+      if (player.isRegistered) {
+        // Get user ID from username
+        const userResult = await pool.query(
+          'SELECT id FROM users WHERE username = $1',
+          [player.username]
+        );
+
+        if (userResult.rows.length > 0) {
+          const invitedUserId = userResult.rows[0].id;
+          console.log(`Found user ID ${invitedUserId} for username ${player.username}`);
+          
+          // Skip if inviting yourself
+          if (invitedUserId === userId) {
+            console.log(`Skipping self-invitation for user ${invitedUserId}`);
+            continue;
+          }
+
+          // Create invitation
+          const inviteResult = await pool.query(`
+            INSERT INTO game_invitations (game_id, invited_by, invited_user, game_type, team_slot, session_data)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+          `, [
+            gameId,
+            userId,
+            invitedUserId,
+            gameType,
+            player.teamSlot,
+            JSON.stringify(players)
+          ]);
+
+          const invitation = inviteResult.rows[0];
+          invitations.push(invitation);
+          console.log(`Created invitation with ID ${invitation.id}`);
+
+          // Check if user is connected via socket
+          const invitedSocketId = userSockets.get(invitedUserId);
+          console.log(`Socket lookup for user ${invitedUserId}:`, invitedSocketId || 'NOT CONNECTED');
+          
+          if (invitedSocketId) {
+            // Get inviter username
+            const inviterResult = await pool.query(
+              'SELECT username FROM users WHERE id = $1',
+              [userId]
+            );
+            
+            const invitationData = {
+              invitationId: invitation.id,
+              gameType,
+              invitedBy: inviterResult.rows[0].username,
+              teamSlot: player.teamSlot,
+              expiresAt: invitation.expires_at
+            };
+            
+            console.log(`Sending socket event to ${invitedSocketId}:`, invitationData);
+            
+            // Send real-time notification to the invited user
+            io.to(invitedSocketId).emit('game_invitation', invitationData);
+            console.log(`✅ Socket event sent to user ${invitedUserId}`);
+          } else {
+            console.log(`❌ User ${invitedUserId} not connected via socket`);
+          }
+        } else {
+          console.log(`❌ User not found for username: ${player.username}`);
+        }
+      } else {
+        console.log(`Skipping non-registered player: ${player.username}`);
+      }
+    }
+
+    console.log(`\nTotal invitations created: ${invitations.length}`);
+    console.log('Current connected users:', Array.from(userSockets.keys()));
+    console.log('=== INVITATION DEBUG END ===\n');
+
+    res.json({
+      success: true,
+      invitationsSent: invitations.length,
+      invitations,
+      debug: {
+        totalPlayers: players.length,
+        registeredPlayers: players.filter(p => p.isRegistered).length,
+        connectedUsers: Array.from(userSockets.keys()),
+        socketMappings: Object.fromEntries(userSockets)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error sending game invitations:', error);
+    console.log('=== INVITATION DEBUG END (ERROR) ===\n');
+    res.status(500).json({ error: 'Failed to send invitations' });
+  }
+});
+
+// Add debugging endpoint to check socket connections
+app.get('/api/debug/connections', (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Must be logged in' });
+  }
+
+  const connectionsInfo = {
+    totalConnections: userSockets.size,
+    connectedUsers: Array.from(userSockets.entries()).map(([userId, socketId]) => ({
+      userId,
+      socketId
+    })),
+    currentUser: {
+      id: req.session.userId,
+      socketId: userSockets.get(req.session.userId) || null,
+      connected: userSockets.has(req.session.userId)
+    }
+  };
+
+  res.json(connectionsInfo);
 });
 
 // Get pending invitations for a user

@@ -1,3 +1,4 @@
+// Updated App.jsx with Global Invitation Handler
 import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import HomePage from './../pages/HomePage';
@@ -11,6 +12,7 @@ import ProfilePage from '../pages/ProfilePage';
 import useAuth from './hooks/useAuth';
 import useSocket from './hooks/useSocket';
 import { InvitationNotificationBadge } from './components';
+import GlobalInvitationHandler from './components/GlobalInvitationHandler'; // Add this import
 
 function App() {
   const [user, setUser, refreshUser] = useAuth();
@@ -64,6 +66,9 @@ function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
+      {/* Global Invitation Handler - Add this */}
+      <GlobalInvitationHandler />
+      
       <div className="container">
         <nav className="navbar navbar-expand-md py-3 mb-4 border-bottom">
           <a href="/" className="navbar-brand d-flex align-items-center">
