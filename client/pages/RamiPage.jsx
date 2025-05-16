@@ -31,6 +31,22 @@ export default function RamiPage() {
   const [hasMore, setHasMore] = useState(true);
   const [numberOfPlayers, setNumberOfPlayers] = useState(3);
   const [showRoundDetails, setShowRoundDetails] = useState(false);
+  
+  // New states for player selection
+  const [registeredUsers, setRegisteredUsers] = useState([]);
+  const [teamPlayers, setTeamPlayers] = useState({
+    team1: { player1: '', player2: '' },
+    team2: { player1: '', player2: '' }
+  });
+  const [customPlayerInputs, setCustomPlayerInputs] = useState({
+    team1: { player1: false, player2: false },
+    team2: { player1: false, player2: false }
+  });
+  
+  // States for Chkan player selection
+  const [chkanPlayers, setChkanPlayers] = useState({});
+  const [chkanCustomInputs, setChkanCustomInputs] = useState({});
+  
   const scoresPerPage = 5;
 
   // Calculate game duration
@@ -38,7 +54,7 @@ export default function RamiPage() {
     if (!gameCreatedAt) return '';
     
     const startTime = new Date(gameCreatedAt);
-    const now = gameTime; // Use the state variable for real-time updates
+    const now = gameTime;
     const diffMs = now - startTime;
     
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -63,6 +79,202 @@ export default function RamiPage() {
     } else {
       return gameState.teams.length > 0 ? gameState.teams[0].scores.length : 0;
     }
+  };
+
+  // Fetch registered users for dropdown
+  const fetchRegisteredUsers = async () => {
+    try {
+      const response = await fetch('http://192.168.0.12:5000/api/users', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const users = await response.json();
+        setRegisteredUsers(users);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  // Player selection handlers
+  const handlePlayerSelection = (team, playerSlot, value) => {
+    setTeamPlayers(prev => ({
+      ...prev,
+      [team]: {
+        ...prev[team],
+        [playerSlot]: value
+      }
+    }));
+  };
+
+  const toggleCustomInput = (team, playerSlot) => {
+    setCustomPlayerInputs(prev => ({
+      ...prev,
+      [team]: {
+        ...prev[team],
+        [playerSlot]: !prev[team][playerSlot]
+      }
+    }));
+    
+    // Clear the current selection when toggling to custom
+    if (!customPlayerInputs[team][playerSlot]) {
+      setTeamPlayers(prev => ({
+        ...prev,
+        [team]: {
+          ...prev[team],
+          [playerSlot]: ''
+        }
+      }));
+    }
+  };
+
+  // Chkan player selection handlers
+  const handleChkanPlayerSelection = (playerIndex, value) => {
+    setChkanPlayers(prev => ({
+      ...prev,
+      [playerIndex]: value
+    }));
+  };
+
+  const toggleChkanCustomInput = (playerIndex) => {
+    setChkanCustomInputs(prev => ({
+      ...prev,
+      [playerIndex]: !prev[playerIndex]
+    }));
+    
+    // Clear the current selection when toggling to custom
+    if (!chkanCustomInputs[playerIndex]) {
+      setChkanPlayers(prev => ({
+        ...prev,
+        [playerIndex]: ''
+      }));
+    }
+  };
+
+  // Initialize Chkan player states
+  const initializeChkanPlayerStates = (numPlayers) => {
+    const players = {};
+    const customInputs = {};
+    
+    for (let i = 0; i < numPlayers; i++) {
+      players[i] = '';
+      customInputs[i] = false;
+    }
+    
+    setChkanPlayers(players);
+    setChkanCustomInputs(customInputs);
+  };
+
+  // Render player selection for S7ab
+  const renderPlayerSelection = (team, teamNumber) => {
+    return (
+      <div className="card mb-3">
+        <div className="card-header">
+          <h6 className="mb-0">Équipe {teamNumber}</h6>
+        </div>
+        <div className="card-body">
+          {['player1', 'player2'].map((playerSlot, index) => (
+            <div key={playerSlot} className="mb-3">
+              <label className="form-label fw-semibold">
+                Joueur {index + 1}
+              </label>
+              <div className="d-flex gap-2 align-items-center">
+                {customPlayerInputs[team][playerSlot] ? (
+                  <FormInput
+                    value={teamPlayers[team][playerSlot]}
+                    onChange={(e) => handlePlayerSelection(team, playerSlot, e.target.value)}
+                    placeholder="Entrer nom du joueur"
+                    className="mb-0 flex-grow-1"
+                  />
+                ) : (
+                  <select
+                    className="form-select flex-grow-1"
+                    value={teamPlayers[team][playerSlot]}
+                    onChange={(e) => handlePlayerSelection(team, playerSlot, e.target.value)}
+                  >
+                    <option value="">Choisir un joueur</option>
+                    {registeredUsers.map((user) => (
+                      <option key={user.id} value={user.username}>
+                        {user.username}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => toggleCustomInput(team, playerSlot)}
+                  title={customPlayerInputs[team][playerSlot] ? "Sélectionner depuis la liste" : "Saisir manuellement"}
+                >
+                  {customPlayerInputs[team][playerSlot] ? (
+                    <i className="bi bi-list"></i>
+                  ) : (
+                    <i className="bi bi-pencil"></i>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render player selection for Chkan
+  const renderChkanPlayerSelection = (numPlayers) => {
+    return (
+      <div className="card mb-3">
+        <div className="card-header">
+          <h6 className="mb-0">Sélection des joueurs</h6>
+        </div>
+        <div className="card-body">
+          <div className="row g-3">
+            {Array.from({ length: numPlayers }, (_, index) => (
+              <div key={index} className="col-12 col-md-6">
+                <label className="form-label fw-semibold">
+                  Joueur {index + 1}
+                </label>
+                <div className="d-flex gap-2 align-items-center">
+                  {chkanCustomInputs[index] ? (
+                    <FormInput
+                      value={chkanPlayers[index] || ''}
+                      onChange={(e) => handleChkanPlayerSelection(index, e.target.value)}
+                      placeholder="Entrer nom du joueur"
+                      className="mb-0 flex-grow-1"
+                    />
+                  ) : (
+                    <select
+                      className="form-select flex-grow-1"
+                      value={chkanPlayers[index] || ''}
+                      onChange={(e) => handleChkanPlayerSelection(index, e.target.value)}
+                    >
+                      <option value="">Choisir un joueur</option>
+                      {registeredUsers.map((user) => (
+                        <option key={user.id} value={user.username}>
+                          {user.username}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm"
+                    onClick={() => toggleChkanCustomInput(index)}
+                    title={chkanCustomInputs[index] ? "Sélectionner depuis la liste" : "Saisir manuellement"}
+                  >
+                    {chkanCustomInputs[index] ? (
+                      <i className="bi bi-list"></i>
+                    ) : (
+                      <i className="bi bi-pencil"></i>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Render round-by-round details table
@@ -120,7 +332,7 @@ export default function RamiPage() {
           <table className="table table-sm table-bordered">
             <thead className="bg-light">
               <tr>
-                <th className="fw-semibold">Equipe</th>
+                <th className="fw-semibold">Équipe</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
                   <th key={i} className="text-center fw-semibold">R{i + 1}</th>
                 ))}
@@ -130,7 +342,14 @@ export default function RamiPage() {
             <tbody>
               {teams.map((team, index) => (
                 <tr key={index}>
-                  <td className="fw-medium">{team.name}</td>
+                  <td className="fw-medium">
+                    <div>{team.name}</div>
+                    {team.players && (
+                      <small className="text-muted">
+                        {team.players.join(' & ')}
+                      </small>
+                    )}
+                  </td>
                   {Array.from({ length: maxRounds }, (_, roundIndex) => (
                     <td key={roundIndex} className="text-center">
                       {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
@@ -150,6 +369,7 @@ export default function RamiPage() {
 
   useEffect(() => {
     fetchScores();
+    fetchRegisteredUsers();
     if (user) {
       checkForActiveGame();
     } else {
@@ -163,7 +383,7 @@ export default function RamiPage() {
     if (gameCreatedAt) {
       interval = setInterval(() => {
         setGameTime(new Date());
-      }, 1000); // Update every second
+      }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -224,24 +444,47 @@ export default function RamiPage() {
     let initialState;
     
     if (type === 'chkan') {
-      const players = [];
-      for (let i = 0; i < numPlayers; i++) {
-        players.push({
-          name: `Player ${i + 1}`,
-          scores: []
-        });
+      // Validate that players are selected
+      const selectedPlayers = Object.values(chkanPlayers).filter(p => p.trim() !== '');
+      
+      if (selectedPlayers.length !== numPlayers) {
+        setRoundInputError(`Veuillez sélectionner tous les ${numPlayers} joueurs`);
+        return;
       }
+      
+      const players = selectedPlayers.map((playerName, index) => ({
+        name: playerName,
+        scores: []
+      }));
+      
       initialState = {
         type,
         players,
         currentRound: 1
       };
     } else {
+      // For S7ab, create teams with individual players
+      const team1Players = [teamPlayers.team1.player1, teamPlayers.team1.player2].filter(p => p);
+      const team2Players = [teamPlayers.team2.player1, teamPlayers.team2.player2].filter(p => p);
+      
+      if (team1Players.length === 0 || team2Players.length === 0) {
+        setRoundInputError('Veuillez sélectionner au moins un joueur pour chaque équipe');
+        return;
+      }
+      
       initialState = {
         type,
         teams: [
-          { name: 'Team 1', scores: [] },
-          { name: 'Team 2', scores: [] }
+          { 
+            name: `Équipe 1`, 
+            players: team1Players,
+            scores: [] 
+          },
+          { 
+            name: `Équipe 2`, 
+            players: team2Players,
+            scores: [] 
+          }
         ],
         currentRound: 1
       };
@@ -355,7 +598,7 @@ export default function RamiPage() {
           winners: winners.map(p => p.name).join(', ') || 'None',
           losers: losers.map(p => p.name).join(', ') || 'None',
           player_scores: playersWithTotals.map(p => `${p.name}: ${p.totalScore}`).join(', '),
-          created_at: gameCreatedAt, // Include the game creation timestamp
+          created_at: gameCreatedAt,
           game_data: {
             ...gameState,
             players: playersWithTotals,
@@ -364,7 +607,7 @@ export default function RamiPage() {
           }
         };
       } else {
-        // S7ab game
+        // S7ab game with individual player tracking
         const teamsWithTotals = gameState.teams.map(team => ({
           ...team,
           totalScore: team.scores.reduce((sum, score) => sum + score, 0)
@@ -378,11 +621,14 @@ export default function RamiPage() {
           team2: teamsWithTotals[1].name,
           score1: teamsWithTotals[0].totalScore,
           score2: teamsWithTotals[1].totalScore,
-          created_at: gameCreatedAt, // Include the game creation timestamp
+          created_at: gameCreatedAt,
           game_data: {
             ...gameState,
             teams: teamsWithTotals,
-            winner: sortedTeams[0].name
+            winner: sortedTeams[0].name,
+            // Store individual players for each team
+            team1Players: teamsWithTotals[0].players,
+            team2Players: teamsWithTotals[1].players
           }
         };
       }
@@ -399,6 +645,20 @@ export default function RamiPage() {
       setShowForm(false);
       setRoundScores({});
       setShowRoundDetails(false);
+      
+      // Reset S7ab states
+      setTeamPlayers({
+        team1: { player1: '', player2: '' },
+        team2: { player1: '', player2: '' }
+      });
+      setCustomPlayerInputs({
+        team1: { player1: false, player2: false },
+        team2: { player1: false, player2: false }
+      });
+      
+      // Reset Chkan states
+      setChkanPlayers({});
+      setChkanCustomInputs({});
       
       // Refresh scores list
       setPage(1);
@@ -424,6 +684,21 @@ export default function RamiPage() {
       setShowForm(false);
       setRoundScores({});
       setShowRoundDetails(false);
+      
+      // Reset S7ab states
+      setTeamPlayers({
+        team1: { player1: '', player2: '' },
+        team2: { player1: '', player2: '' }
+      });
+      setCustomPlayerInputs({
+        team1: { player1: false, player2: false },
+        team2: { player1: false, player2: false }
+      });
+      
+      // Reset Chkan states
+      setChkanPlayers({});
+      setChkanCustomInputs({});
+      
       setStatus({ type: 'info', message: 'Game cancelled.' });
       setTimeout(() => setStatus(null), 3000);
     } catch (err) {
@@ -453,7 +728,10 @@ export default function RamiPage() {
                 title="Chkan"
                 icon="🧍‍♂️"
                 description="Jeu individuel"
-                onClick={() => initializeGame('chkan', numberOfPlayers)}
+                onClick={() => {
+                  setGameType('chkan');
+                  initializeChkanPlayerStates(numberOfPlayers);
+                }}
               >
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Nombre de joueurs</label>
@@ -475,7 +753,7 @@ export default function RamiPage() {
                 </div>
                 <button className="btn btn-primary btn-lg">
                   <i className="bi bi-play-circle me-2"></i>
-                  Commencer partie Chkan
+                  Configurer partie Chkan
                 </button>
               </GameTypeCard>
             </div>
@@ -484,7 +762,7 @@ export default function RamiPage() {
                 title="S7ab"
                 icon="👬"
                 description="Jeu en équipe (2 équipes)"
-                onClick={() => initializeGame('s7ab')}
+                onClick={() => setGameType('s7ab')}
               >
                 <div className="small text-muted mb-3">
                   <i className="bi bi-info-circle me-1"></i>
@@ -492,10 +770,93 @@ export default function RamiPage() {
                 </div>
                 <button className="btn btn-primary btn-lg">
                   <i className="bi bi-play-circle me-2"></i>
-                  Commencer partie S7ab
+                  Configurer partie S7ab
                 </button>
               </GameTypeCard>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Chkan setup form for selecting players
+    if (gameType === 'chkan' && !gameState) {
+      return (
+        <div>
+          <div className="text-center mb-4">
+            <h3 className="fw-bold text-dark">Configuration Chkan</h3>
+            <p className="text-muted">Sélectionnez les {numberOfPlayers} joueurs</p>
+          </div>
+          
+          {roundInputError && (
+            <div className="alert alert-danger mb-4">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              {roundInputError}
+            </div>
+          )}
+          
+          {renderChkanPlayerSelection(numberOfPlayers)}
+          
+          <div className="text-center">
+            <button 
+              className="btn btn-outline-secondary me-3"
+              onClick={() => setGameType('')}
+            >
+              <i className="bi bi-arrow-left me-2"></i>
+              Retour
+            </button>
+            <button 
+              className="btn btn-primary btn-lg"
+              onClick={() => initializeGame('chkan', numberOfPlayers)}
+            >
+              <i className="bi bi-play-circle me-2"></i>
+              Commencer la partie
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // S7ab setup form for selecting players
+    if (gameType === 's7ab' && !gameState) {
+      return (
+        <div>
+          <div className="text-center mb-4">
+            <h3 className="fw-bold text-dark">Configuration S7ab</h3>
+            <p className="text-muted">Sélectionnez les joueurs pour chaque équipe</p>
+          </div>
+          
+          {roundInputError && (
+            <div className="alert alert-danger mb-4">
+              <i className="bi bi-exclamation-triangle me-2"></i>
+              {roundInputError}
+            </div>
+          )}
+          
+          <div className="row">
+            <div className="col-12 col-md-6">
+              {renderPlayerSelection('team1', 1)}
+            </div>
+            <div className="col-12 col-md-6">
+              {renderPlayerSelection('team2', 2)}
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <button 
+              className="btn btn-outline-secondary me-3"
+              onClick={() => setGameType('')}
+            >
+              <i className="bi bi-arrow-left me-2"></i>
+              Retour
+            </button>
+            <button 
+              className="btn btn-primary btn-lg"
+              onClick={() => initializeGame('s7ab')}
+            >
+              <i className="bi bi-play-circle me-2"></i>
+              Commencer la partie
+            </button>
           </div>
         </div>
       );
@@ -607,6 +968,11 @@ export default function RamiPage() {
                       <div key={index} className="col-6">
                         <div className="text-center p-3 bg-light rounded">
                           <div className="fw-semibold">{team.name}</div>
+                          {team.players && (
+                            <div className="small text-muted mb-1">
+                              {team.players.join(' & ')}
+                            </div>
+                          )}
                           <div className="h4 mb-0 text-primary">{total}</div>
                         </div>
                       </div>
@@ -676,17 +1042,14 @@ export default function RamiPage() {
                   <div key={index} className="col-12 col-md-6">
                     <FormInput
                       label={
-                        gameState.currentRound === 1 ? (
-                          <input
-                            type="text"
-                            value={team.name}
-                            onChange={(e) => handleTeamNameChange(index, e.target.value)}
-                            className="form-control form-control-sm fw-semibold"
-                            placeholder={`Team ${index + 1}`}
-                          />
-                        ) : (
-                          team.name
-                        )
+                        <div>
+                          <div className="fw-semibold">{team.name}</div>
+                          {team.players && (
+                            <small className="text-muted">
+                              {team.players.join(' & ')}
+                            </small>
+                          )}
+                        </div>
                       }
                       type="number"
                       name={`team-${index}`}

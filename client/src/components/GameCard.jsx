@@ -101,14 +101,25 @@ const GameCard = ({ game }) => {
           <div className="row g-2 mb-3">
             {players.map((player, index) => {
               const isWinner = hasWinners ? player.score < 701 : index === 0;
+              const isLoser = hasWinners && player.score >= 701;
               return (
                 <div key={index} className="col-6">
-                  <div className={`text-center p-2 rounded ${isWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                  <div className={`text-center p-2 rounded ${
+                    isWinner ? 'bg-success bg-opacity-10 border-success' : 
+                    isLoser ? 'bg-danger bg-opacity-10 border-danger' : 
+                    'bg-light'
+                  }`}>
                     <div className="fw-bold small text-muted">
-                      {isWinner && hasWinners ? 'WINNER' : `PLAYER ${index + 1}`}
+                      {isWinner && hasWinners ? 'WINNER' : 
+                       isLoser ? 'LOSER' : 
+                       `PLAYER ${index + 1}`}
                     </div>
                     <div className="fw-semibold small">{player.name}</div>
-                    <div className={`h6 mb-0 ${isWinner ? 'text-success' : 'text-primary'}`}>
+                    <div className={`h6 mb-0 ${
+                      isWinner ? 'text-success' : 
+                      isLoser ? 'text-danger' : 
+                      'text-primary'
+                    }`}>
                       {player.score}
                     </div>
                   </div>
@@ -116,23 +127,70 @@ const GameCard = ({ game }) => {
               );
             })}
           </div>
-          
-          {/* Winners summary */}
-          {hasWinners && (
-            <div className="border-top pt-2">
-              <div className="text-center">
-                <span className="text-success fw-medium small">
-                  🏆 {winners.length} Winner{winners.length > 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
   } else {
-    // S7ab game (legacy format)
+    // S7ab game - display team players if available
     const duration = calculateDuration();
+    
+    // Try to get team player information from game_data
+    let team1Players = null;
+    let team2Players = null;
+    let team1Name = game.team1;
+    let team2Name = game.team2;
+    
+    if (game.game_data) {
+      try {
+        const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+        
+        // Check for team players in different possible locations
+        if (gameData.team1Players && gameData.team2Players) {
+          team1Players = gameData.team1Players;
+          team2Players = gameData.team2Players;
+        } else if (gameData.teams && gameData.teams.length >= 2) {
+          team1Players = gameData.teams[0].players;
+          team2Players = gameData.teams[1].players;
+          // Also get team names from teams array if available
+          team1Name = gameData.teams[0].name || game.team1;
+          team2Name = gameData.teams[1].name || game.team2;
+        }
+      } catch (error) {
+        console.error('Error parsing game_data:', error);
+      }
+    }
+    
+    // Function to render team info
+    const renderTeamInfo = (teamName, players, score, isWinner, isLoser) => (
+      <div className={`text-center p-2 rounded ${
+        isWinner ? 'bg-success bg-opacity-10 border-success' : 
+        isLoser ? 'bg-danger bg-opacity-10 border-danger' : 
+        'bg-light'
+      }`}>
+        <div className="fw-bold small text-muted">
+          {isWinner ? 'WINNER' : 
+           isLoser ? 'LOSER' : 
+           (players && players.length > 0 ? 'TEAM' : teamName.toUpperCase())}
+        </div>
+        {players && players.length > 0 ? (
+          <div className="fw-semibold small">
+            {players.join(' & ')}
+          </div>
+        ) : (
+          <div className="fw-semibold small">{teamName}</div>
+        )}
+        <div className={`h5 mb-0 ${
+          isWinner ? 'text-success' : 
+          isLoser ? 'text-danger' : 
+          'text-primary'
+        }`}>
+          {score}
+        </div>
+      </div>
+    );
+    
+    // Determine winner (team with lower score)
+    const team1IsWinner = game.score1 < game.score2;
     
     return (
       <div className="card border-0 shadow-sm h-100">
@@ -157,21 +215,13 @@ const GameCard = ({ game }) => {
           </div>
           <div className="row g-2">
             <div className="col-5">
-              <div className="text-center p-2 bg-light rounded">
-                <div className="fw-bold small text-muted">TEAM 1</div>
-                <div className="fw-semibold small">{game.team1}</div>
-                <div className="h5 mb-0 text-primary">{game.score1}</div>
-              </div>
+              {renderTeamInfo(team1Name, team1Players, game.score1, team1IsWinner, !team1IsWinner)}
             </div>
             <div className="col-2 d-flex align-items-center justify-content-center">
               <span className="text-muted fw-medium">VS</span>
             </div>
             <div className="col-5">
-              <div className="text-center p-2 bg-light rounded">
-                <div className="fw-bold small text-muted">TEAM 2</div>
-                <div className="fw-semibold small">{game.team2}</div>
-                <div className="h5 mb-0 text-primary">{game.score2}</div>
-              </div>
+              {renderTeamInfo(team2Name, team2Players, game.score2, !team1IsWinner, team1IsWinner)}
             </div>
           </div>
         </div>

@@ -68,6 +68,17 @@ app.post('/api/active-game', async (req, res) => {
   }
 });
 
+// Add this to server/index.js
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username FROM users ORDER BY username');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
 // Get active game state
 app.get('/api/active-game', async (req, res) => {
   const userId = req.session.userId;
