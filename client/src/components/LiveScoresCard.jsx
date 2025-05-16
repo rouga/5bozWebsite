@@ -22,6 +22,7 @@ const calculateDuration = (createdAt, currentTime) => {
 
 const LiveScoresCard = ({ activeGames, loading, error }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [expandedGame, setExpandedGame] = useState(null);
 
   // Update time every second for real-time duration updates
   useEffect(() => {
@@ -32,6 +33,86 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const toggleGameDetails = (gameIndex) => {
+    setExpandedGame(expandedGame === gameIndex ? null : gameIndex);
+  };
+
+  const renderRoundDetails = (gameData, gameType) => {
+    if (gameType === 'chkan') {
+      const players = gameData.players || [];
+      const maxRounds = Math.max(...players.map(p => p.scores.length));
+      
+      if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      
+      return (
+        <div className="table-responsive mt-3">
+          <table className="table table-sm table-bordered">
+            <thead className="bg-light">
+              <tr>
+                <th className="fw-semibold">Player</th>
+                {Array.from({ length: maxRounds }, (_, i) => (
+                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                ))}
+                <th className="text-center fw-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((player, index) => (
+                <tr key={index}>
+                  <td className="fw-medium">{player.name}</td>
+                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                    <td key={roundIndex} className="text-center">
+                      {player.scores[roundIndex] !== undefined ? player.scores[roundIndex] : '–'}
+                    </td>
+                  ))}
+                  <td className="text-center fw-bold bg-primary text-white">
+                    {player.scores.reduce((a, b) => a + b, 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    } else {
+      const teams = gameData.teams || [];
+      const maxRounds = Math.max(...teams.map(t => t.scores.length));
+      
+      if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      
+      return (
+        <div className="table-responsive mt-3">
+          <table className="table table-sm table-bordered">
+            <thead className="bg-light">
+              <tr>
+                <th className="fw-semibold">Team</th>
+                {Array.from({ length: maxRounds }, (_, i) => (
+                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                ))}
+                <th className="text-center fw-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teams.map((team, index) => (
+                <tr key={index}>
+                  <td className="fw-medium">{team.name}</td>
+                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                    <td key={roundIndex} className="text-center">
+                      {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+                    </td>
+                  ))}
+                  <td className="text-center fw-bold bg-primary text-white">
+                    {team.scores.reduce((a, b) => a + b, 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+  };
+
   const renderActiveGame = (game, index) => {
     if (!game.gameState) return null;
 
@@ -41,6 +122,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
 
     const gameType = game.gameType;
     const duration = calculateDuration(game.createdAt, currentTime);
+    const isExpanded = expandedGame === index;
 
     if (gameType === 'chkan') {
       const players = gameData.players || [];
@@ -107,7 +189,37 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 </small>
               </div>
             )}
+
+            {/* Show/Hide Details Button */}
+            {totalRounds > 0 && (
+              <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+                <button
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => toggleGameDetails(index)}
+                >
+                  {isExpanded ? (
+                    <>
+                      <i className="bi bi-chevron-up me-1"></i>
+                      Hide Round Details
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-chevron-down me-1"></i>
+                      Show Round Details
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Expanded Details */}
+          {isExpanded && (
+            <div className="card-footer bg-light">
+              <h6 className="text-muted mb-2">Round-by-Round Scores</h6>
+              {renderRoundDetails(gameData, gameType)}
+            </div>
+          )}
         </div>
       );
     } else if (gameType === 's7ab') {
@@ -172,7 +284,37 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 </div>
               </div>
             </div>
+
+            {/* Show/Hide Details Button */}
+            {totalRounds > 0 && (
+              <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+                <button
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => toggleGameDetails(index)}
+                >
+                  {isExpanded ? (
+                    <>
+                      <i className="bi bi-chevron-up me-1"></i>
+                      Hide Round Details
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-chevron-down me-1"></i>
+                      Show Round Details
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Expanded Details */}
+          {isExpanded && (
+            <div className="card-footer bg-light">
+              <h6 className="text-muted mb-2">Round-by-Round Scores</h6>
+              {renderRoundDetails(gameData, gameType)}
+            </div>
+          )}
         </div>
       );
     }

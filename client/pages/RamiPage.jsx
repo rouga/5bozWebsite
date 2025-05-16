@@ -30,6 +30,7 @@ export default function RamiPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [numberOfPlayers, setNumberOfPlayers] = useState(3);
+  const [showRoundDetails, setShowRoundDetails] = useState(false);
   const scoresPerPage = 5;
 
   // Calculate game duration
@@ -61,6 +62,89 @@ export default function RamiPage() {
       return gameState.players.length > 0 ? gameState.players[0].scores.length : 0;
     } else {
       return gameState.teams.length > 0 ? gameState.teams[0].scores.length : 0;
+    }
+  };
+
+  // Render round-by-round details table
+  const renderRoundDetails = () => {
+    const completedRounds = getCompletedRounds();
+    
+    if (completedRounds === 0) {
+      return (
+        <div className="text-center py-3">
+          <p className="text-muted mb-0">No rounds completed yet.</p>
+        </div>
+      );
+    }
+
+    if (gameType === 'chkan') {
+      const players = gameState.players || [];
+      const maxRounds = Math.max(...players.map(p => p.scores.length));
+      
+      return (
+        <div className="table-responsive">
+          <table className="table table-sm table-bordered">
+            <thead className="bg-light">
+              <tr>
+                <th className="fw-semibold">Player</th>
+                {Array.from({ length: maxRounds }, (_, i) => (
+                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                ))}
+                <th className="text-center fw-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((player, index) => (
+                <tr key={index}>
+                  <td className="fw-medium">{player.name}</td>
+                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                    <td key={roundIndex} className="text-center">
+                      {player.scores[roundIndex] !== undefined ? player.scores[roundIndex] : '–'}
+                    </td>
+                  ))}
+                  <td className="text-center fw-bold bg-primary text-white">
+                    {player.scores.reduce((a, b) => a + b, 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    } else {
+      const teams = gameState.teams || [];
+      const maxRounds = Math.max(...teams.map(t => t.scores.length));
+      
+      return (
+        <div className="table-responsive">
+          <table className="table table-sm table-bordered">
+            <thead className="bg-light">
+              <tr>
+                <th className="fw-semibold">Team</th>
+                {Array.from({ length: maxRounds }, (_, i) => (
+                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                ))}
+                <th className="text-center fw-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teams.map((team, index) => (
+                <tr key={index}>
+                  <td className="fw-medium">{team.name}</td>
+                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                    <td key={roundIndex} className="text-center">
+                      {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+                    </td>
+                  ))}
+                  <td className="text-center fw-bold bg-primary text-white">
+                    {team.scores.reduce((a, b) => a + b, 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
     }
   };
 
@@ -231,6 +315,11 @@ export default function RamiPage() {
 
     // Save the game state
     await saveGameState(updatedState);
+    
+    // Auto-expand round details after first round
+    if (getCompletedRounds() === 1) {
+      setShowRoundDetails(true);
+    }
   };
 
   const saveGameState = async (state) => {
@@ -307,6 +396,7 @@ export default function RamiPage() {
       setGameCreatedAt(null);
       setShowForm(false);
       setRoundScores({});
+      setShowRoundDetails(false);
       
       // Refresh scores list
       setPage(1);
@@ -331,6 +421,7 @@ export default function RamiPage() {
       setGameCreatedAt(null);
       setShowForm(false);
       setRoundScores({});
+      setShowRoundDetails(false);
       setStatus({ type: 'info', message: 'Game cancelled.' });
       setTimeout(() => setStatus(null), 3000);
     } catch (err) {
@@ -470,8 +561,26 @@ export default function RamiPage() {
         {/* Current Standings */}
         {gameState.currentRound > 1 && (
           <div className="card mb-4">
-            <div className="card-header">
+            <div className="card-header d-flex justify-content-between align-items-center">
               <h6 className="mb-0">Current Standings</h6>
+              {completedRounds > 0 && (
+                <button
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => setShowRoundDetails(!showRoundDetails)}
+                >
+                  {showRoundDetails ? (
+                    <>
+                      <i className="bi bi-chevron-up me-1"></i>
+                      Hide Round Details
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-chevron-down me-1"></i>
+                      Show Round Details
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <div className="card-body">
               {gameType === 'chkan' ? (
@@ -504,6 +613,14 @@ export default function RamiPage() {
                 </div>
               )}
             </div>
+            
+            {/* Round Details Table */}
+            {showRoundDetails && (
+              <div className="card-footer bg-light">
+                <h6 className="text-muted mb-3">Round-by-Round Breakdown</h6>
+                {renderRoundDetails()}
+              </div>
+            )}
           </div>
         )}
 

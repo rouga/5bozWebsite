@@ -12,7 +12,7 @@ const SectionCard = ({
   actions
 }) => {
   return (
-    <div className={`card border-0 shadow-sm ${className}`}>
+    <div className={`card border-0 shadow-sm mb-4 ${className}`}>
       <div className={`card-header bg-white border-bottom-0 p-4 ${headerClassName}`}>
         <div className="d-flex justify-content-between align-items-center">
           <div>
