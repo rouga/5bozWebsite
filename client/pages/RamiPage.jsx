@@ -355,6 +355,7 @@ export default function RamiPage() {
           winners: winners.map(p => p.name).join(', ') || 'None',
           losers: losers.map(p => p.name).join(', ') || 'None',
           player_scores: playersWithTotals.map(p => `${p.name}: ${p.totalScore}`).join(', '),
+          created_at: gameCreatedAt, // Include the game creation timestamp
           game_data: {
             ...gameState,
             players: playersWithTotals,
@@ -377,6 +378,7 @@ export default function RamiPage() {
           team2: teamsWithTotals[1].name,
           score1: teamsWithTotals[0].totalScore,
           score2: teamsWithTotals[1].totalScore,
+          created_at: gameCreatedAt, // Include the game creation timestamp
           game_data: {
             ...gameState,
             teams: teamsWithTotals,

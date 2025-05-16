@@ -153,7 +153,6 @@ app.get('/api/scores/count', async (req, res) => {
   }
 });
 
-// Updated post scores endpoint to handle both Chkan and S7ab games
 app.post('/api/scores', async (req, res) => {
   const gameData = req.body;
   
@@ -162,7 +161,7 @@ app.post('/api/scores', async (req, res) => {
     
     if (gameData.type === 'chkan') {
       // Handle Chkan game - don't use team1/team2/score1/score2 columns
-      const { winners, losers, player_scores, game_data } = gameData;
+      const { winners, losers, player_scores, game_data, created_at } = gameData;
       
       // Ensure all required fields are present
       if (!winners || !player_scores || !game_data) {
@@ -170,17 +169,32 @@ app.post('/api/scores', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields for Chkan game' });
       }
       
+      // Convert created_at to UTC if provided, otherwise use current UTC time
+      let gameCreatedAt;
+      if (created_at) {
+        // Ensure created_at is properly converted to UTC
+        gameCreatedAt = new Date(created_at).toISOString();
+      } else {
+        gameCreatedAt = new Date().toISOString();
+      }
+      
+      // Use current UTC time for played_at to match created_at format
+      const playedAt = new Date().toISOString();
+      
+      console.log('Using created_at:', gameCreatedAt);
+      console.log('Using played_at:', playedAt);
+      
       const result = await pool.query(
-        `INSERT INTO games (type, winners, losers, player_scores, game_data, played_at) 
-         VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
-        ['chkan', winners, losers || '', player_scores, JSON.stringify(game_data)]
+        `INSERT INTO games (type, winners, losers, player_scores, game_data, created_at, played_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        ['chkan', winners, losers || '', player_scores, JSON.stringify(game_data), gameCreatedAt, playedAt]
       );
       
       console.log('Chkan game saved successfully:', result.rows[0]);
       res.json(result.rows[0]);
     } else {
       // Handle S7ab game (use existing team1/team2/score1/score2 columns for backward compatibility)
-      const { team1, team2, score1, score2, game_data } = gameData;
+      const { team1, team2, score1, score2, game_data, created_at } = gameData;
       
       // Ensure all required fields are present
       if (!team1 || !team2 || score1 === undefined || score2 === undefined) {
@@ -188,10 +202,25 @@ app.post('/api/scores', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields for S7ab game' });
       }
       
+      // Convert created_at to UTC if provided, otherwise use current UTC time
+      let gameCreatedAt;
+      if (created_at) {
+        // Ensure created_at is properly converted to UTC
+        gameCreatedAt = new Date(created_at).toISOString();
+      } else {
+        gameCreatedAt = new Date().toISOString();
+      }
+      
+      // Use current UTC time for played_at to match created_at format
+      const playedAt = new Date().toISOString();
+      
+      console.log('Using created_at:', gameCreatedAt);
+      console.log('Using played_at:', playedAt);
+      
       const result = await pool.query(
-        `INSERT INTO games (type, team1, team2, score1, score2, game_data, played_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
-        ['s7ab', team1, team2, score1, score2, JSON.stringify(game_data)]
+        `INSERT INTO games (type, team1, team2, score1, score2, game_data, created_at, played_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        ['s7ab', team1, team2, score1, score2, JSON.stringify(game_data), gameCreatedAt, playedAt]
       );
       
       console.log('S7ab game saved successfully:', result.rows[0]);
@@ -202,6 +231,7 @@ app.post('/api/scores', async (req, res) => {
     res.status(500).json({ error: 'Failed to save game: ' + err.message });
   }
 });
+
 
 app.get('/api/active-games', async (req, res) => {
   try {

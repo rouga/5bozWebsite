@@ -1,6 +1,61 @@
 import React from 'react';
 
 const GameCard = ({ game }) => {
+  // Calculate game duration using created_at and played_at timestamps
+  const calculateDuration = () => {
+    if (!game.created_at || !game.played_at) return null;
+    
+    // Handle timezone issues by ensuring both dates are properly parsed
+    // The timestamps from the database are in UTC, so we need to handle them consistently
+    let createdTime, playedTime;
+    
+    try {
+      // If the timestamp includes 'Z' or timezone info, use it as-is
+      // Otherwise, treat it as UTC
+      if (game.created_at.includes('Z') || game.created_at.includes('+') || game.created_at.includes('-')) {
+        createdTime = new Date(game.created_at);
+      } else {
+        // Assume UTC if no timezone specified
+        createdTime = new Date(game.created_at + 'Z');
+      }
+      
+      if (game.played_at.includes('Z') || game.played_at.includes('+') || game.played_at.includes('-')) {
+        playedTime = new Date(game.played_at);
+      } else {
+        // Assume UTC if no timezone specified
+        playedTime = new Date(game.played_at + 'Z');
+      }
+    } catch (error) {
+      console.error('Error parsing timestamps:', error);
+      return null;
+    }
+    
+    // Check if dates are valid
+    if (isNaN(createdTime.getTime()) || isNaN(playedTime.getTime())) {
+      return null;
+    }
+    
+    // Calculate the difference
+    const diffMs = playedTime.getTime() - createdTime.getTime();
+    
+    // If duration is negative or unreasonably long (more than 24 hours), return null
+    if (diffMs <= 0 || diffMs > 24 * 60 * 60 * 1000) {
+      return null;
+    }
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   if (game.type === 'chkan') {
     // Parse player scores
     const playerScores = game.player_scores ? game.player_scores.split(', ') : [];
@@ -18,19 +73,28 @@ const GameCard = ({ game }) => {
     // Determine winners (below 701)
     const winners = players.filter(p => p.score < 701);
     const hasWinners = winners.length > 0;
+    const duration = calculateDuration();
     
     return (
       <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span className="badge bg-info rounded-pill">🎯 Chkan</span>
-            <small className="text-muted">
-              {new Date(game.played_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </small>
+            <div className="text-end">
+              <small className="text-muted d-block">
+                {new Date(game.played_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </small>
+              {duration && (
+                <small className="text-muted">
+                  <i className="bi bi-clock me-1"></i>
+                  {duration}
+                </small>
+              )}
+            </div>
           </div>
           
           {/* Player scores grid */}
@@ -68,18 +132,28 @@ const GameCard = ({ game }) => {
     );
   } else {
     // S7ab game (legacy format)
+    const duration = calculateDuration();
+    
     return (
       <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-3">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span className="badge bg-success rounded-pill">🤝 S7ab</span>
-            <small className="text-muted">
-              {new Date(game.played_at).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </small>
+            <div className="text-end">
+              <small className="text-muted d-block">
+                {new Date(game.played_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </small>
+              {duration && (
+                <small className="text-muted">
+                  <i className="bi bi-clock me-1"></i>
+                  {duration}
+                </small>
+              )}
+            </div>
           </div>
           <div className="row g-2">
             <div className="col-5">
