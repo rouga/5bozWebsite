@@ -13,8 +13,16 @@ export default function useSocket() {
         withCredentials: true
       });
 
-      // Emit user login to associate socket with user ID
-      socketRef.current.emit('user_login', user.id);
+      // Wait for connection before emitting user_login
+      socketRef.current.on('connect', () => {
+        console.log('Socket connected:', socketRef.current.id);
+        socketRef.current.emit('user_login', user.id);
+      });
+
+      // Handle connection errors
+      socketRef.current.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+      });
 
       return () => {
         if (socketRef.current) {
