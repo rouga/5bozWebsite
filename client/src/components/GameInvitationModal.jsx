@@ -1,4 +1,4 @@
-// Updated GameInvitationModal that requires user action to close
+// Fixed GameInvitationModal.jsx
 import React, { useState, useEffect } from 'react';
 
 const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
@@ -15,7 +15,7 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
       const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
       setTimeLeft(remaining);
       
-      // Only auto-close when invitation expires, not on manual close
+      // Only auto-close when invitation expires
       if (remaining <= 0) {
         console.log('GameInvitationModal: Invitation expired, closing modal');
         onClose();
@@ -31,21 +31,27 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
 
   const handleResponse = async (response) => {
     console.log('GameInvitationModal: Handling response:', response);
+    
+    if (responding) {
+      console.log('Already responding, ignoring duplicate');
+      return;
+    }
+    
     setResponding(true);
-    await onRespond(invitation.invitationId, response);
-    setResponding(false);
-    // Modal will be closed by the parent component after response
+    
+    try {
+      await onRespond(invitation.invitationId, response);
+      console.log('GameInvitationModal: Response sent successfully');
+      // Don't setResponding(false) here - let the parent handle modal closure
+    } catch (error) {
+      console.error('GameInvitationModal: Error sending response:', error);
+      setResponding(false);
+    }
   };
 
   const handleBackdropClick = (e) => {
     // Prevent closing on backdrop click
     e.stopPropagation();
-  };
-
-  const handleCloseClick = () => {
-    // You can comment this out to completely prevent manual closing
-    // For now, it's disabled in the onClose handler in GlobalInvitationHandler
-    onClose();
   };
 
   const formatTimeLeft = () => {
@@ -90,7 +96,7 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.7)', // Slightly darker to indicate it's modal
+          backgroundColor: 'rgba(0,0,0,0.7)',
           zIndex: 2040 
         }}
         onClick={handleBackdropClick}
@@ -120,16 +126,6 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
                 <i className="bi bi-controller me-2"></i>
                 Game Invitation
               </h5>
-              {/* Optionally hide the close button to force user to choose */}
-              {/* 
-              <button 
-                type="button" 
-                className="btn-close btn-close-white" 
-                onClick={handleCloseClick}
-                disabled={responding}
-                style={{ display: 'none' }} // Hide close button
-              ></button>
-              */}
             </div>
             
             <div className="modal-body text-center">
@@ -177,11 +173,16 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
                     disabled={responding}
                   >
                     {responding ? (
-                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2"></span>
+                        Accepting...
+                      </>
                     ) : (
-                      <i className="bi bi-check-circle me-2"></i>
+                      <>
+                        <i className="bi bi-check-circle me-2"></i>
+                        Accept
+                      </>
                     )}
-                    Accept
                   </button>
                 </div>
                 <div className="col-6">
@@ -191,11 +192,16 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
                     disabled={responding}
                   >
                     {responding ? (
-                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2"></span>
+                        Declining...
+                      </>
                     ) : (
-                      <i className="bi bi-x-circle me-2"></i>
+                      <>
+                        <i className="bi bi-x-circle me-2"></i>
+                        Decline
+                      </>
                     )}
-                    Decline
                   </button>
                 </div>
               </div>

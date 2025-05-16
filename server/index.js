@@ -1,3 +1,4 @@
+// Fixed server/index.js - Remove duplicate endpoint and fix invitation handling
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -21,8 +22,6 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 12, // 12 hours
     sameSite: 'lax' // Important for cross-origin requests
   },
-  // Add session store if using Redis or MongoDB in production
-  // For now, using in-memory store (not recommended for production)
 }));
 
 app.use(express.json());
@@ -42,97 +41,7 @@ const { io, userSockets } = initializeSocket(server);
 app.locals.io = io;
 app.locals.userSockets = userSockets;
 
-// Game invitation endpoints
-
-// Also update your existing endpoint with better debugging
-app.post('/api/game-invitations', async (req, res) => {
-  const userId = req.session.userId;
-  const { gameType, players, gameId } = req.body;
-
-  if (!userId) {
-    return res.status(401).json({ error: 'Must be logged in to send invitations' });
-  }
-
-  try {
-    const invitations = [];
-    
-    for (const player of players) {
-      if (player.isRegistered) {
-        // Get user ID from username
-        const userResult = await pool.query(
-          'SELECT id FROM users WHERE username = $1',
-          [player.username]
-        );
-
-        if (userResult.rows.length > 0) {
-          const invitedUserId = userResult.rows[0].id;
-          
-          // Skip if inviting yourself
-          if (invitedUserId === userId) {
-            continue;
-          }
-
-          // Create invitation
-          const inviteResult = await pool.query(`
-            INSERT INTO game_invitations (game_id, invited_by, invited_user, game_type, team_slot, session_data)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-          `, [
-            gameId,
-            userId,
-            invitedUserId,
-            gameType,
-            player.teamSlot,
-            JSON.stringify(players)
-          ]);
-
-          const invitation = inviteResult.rows[0];
-          invitations.push(invitation);
-
-          // Send real-time notification to the invited user
-          const invitedSocketId = userSockets.get(invitedUserId);
-          if (invitedSocketId) {
-            // Get inviter username
-            const inviterResult = await pool.query(
-              'SELECT username FROM users WHERE id = $1',
-              [userId]
-            );
-            
-            io.to(invitedSocketId).emit('game_invitation', {
-              invitationId: invitation.id,
-              gameType,
-              invitedBy: inviterResult.rows[0].username,
-              teamSlot: player.teamSlot,
-              expiresAt: invitation.expires_at
-            });
-          }
-        }
-      }
-    }
-
-    res.json({
-      success: true,
-      invitationsSent: invitations.length,
-      invitations
-    });
-
-  } catch (error) {
-    console.error('Error sending game invitations:', error);
-    res.status(500).json({ error: 'Failed to send invitations' });
-  }
-});
-
-// Add a session check endpoint
-app.get('/api/session-check', (req, res) => {
-  res.json({
-    sessionId: req.sessionID,
-    session: req.session,
-    userId: req.session.userId,
-    cookies: req.headers.cookie
-  });
-});
-
-// Send game invitations with detailed logging
+// SINGLE game invitation endpoint with proper debugging
 app.post('/api/game-invitations', async (req, res) => {
   const userId = req.session.userId;
   const { gameType, players, gameId } = req.body;
@@ -172,10 +81,12 @@ app.post('/api/game-invitations', async (req, res) => {
             continue;
           }
 
-          // Create invitation
+          // Create invitation with 5-minute expiry
+          const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+          
           const inviteResult = await pool.query(`
-            INSERT INTO game_invitations (game_id, invited_by, invited_user, game_type, team_slot, session_data)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO game_invitations (game_id, invited_by, invited_user, game_type, team_slot, session_data, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
           `, [
             gameId,
@@ -183,7 +94,8 @@ app.post('/api/game-invitations', async (req, res) => {
             invitedUserId,
             gameType,
             player.teamSlot,
-            JSON.stringify(players)
+            JSON.stringify(players),
+            expiresAt
           ]);
 
           const invitation = inviteResult.rows[0];
@@ -335,7 +247,6 @@ app.post('/api/cleanup-invitations', async (req, res) => {
   }
 });
 
-
 // Save or update active game state
 app.post('/api/active-game', async (req, res) => {
   const userId = req.session.userId;
@@ -377,7 +288,7 @@ app.post('/api/active-game', async (req, res) => {
   }
 });
 
-// Add this to server/index.js
+// Get users list
 app.get('/api/users', async (req, res) => {
   try {
     const result = await pool.query('SELECT id, username FROM users ORDER BY username');
@@ -552,7 +463,6 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
-
 app.get('/api/active-games', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -720,6 +630,4 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
-
-
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

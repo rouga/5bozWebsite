@@ -1,4 +1,4 @@
-// Enhanced GlobalInvitationHandler that shows pending invitations on load
+// Fixed GlobalInvitationHandler.jsx
 import React, { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
@@ -10,6 +10,7 @@ const GlobalInvitationHandler = () => {
   const [currentInvitation, setCurrentInvitation] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [processedInvitations, setProcessedInvitations] = useState(new Set());
+  const [isResponding, setIsResponding] = useState(false);
 
   // Fetch and show any pending invitations when component mounts
   useEffect(() => {
@@ -33,6 +34,12 @@ const GlobalInvitationHandler = () => {
       // Check if we've already processed this invitation
       if (processedInvitations.has(invitation.invitationId)) {
         console.log('Invitation already processed, skipping');
+        return;
+      }
+
+      // Check if we're already responding to an invitation
+      if (isResponding) {
+        console.log('Already responding to an invitation, skipping');
         return;
       }
 
@@ -65,16 +72,40 @@ const GlobalInvitationHandler = () => {
       }
     };
 
+    // Listen for response confirmation
+    const handleInvitationResponseSent = (data) => {
+      console.log('GlobalInvitationHandler: Received response confirmation:', data);
+      setIsResponding(false);
+      
+      if (data.success) {
+        // Close modal immediately on successful response
+        setShowModal(false);
+        setCurrentInvitation(null);
+        
+        // Check for more pending invitations after a short delay
+        setTimeout(() => {
+          fetchAndShowPendingInvitation();
+        }, 1000);
+      }
+    };
+
     socket.on('game_invitation', handleGameInvitation);
+    socket.on('invitation_response_sent', handleInvitationResponseSent);
 
     return () => {
       console.log('GlobalInvitationHandler: Cleaning up socket listeners');
       socket.off('game_invitation', handleGameInvitation);
+      socket.off('invitation_response_sent', handleInvitationResponseSent);
     };
-  }, [user, socket, processedInvitations]);
+  }, [user, socket, processedInvitations, isResponding]);
 
   // Function to fetch and show pending invitations
   const fetchAndShowPendingInvitation = async () => {
+    if (isResponding) {
+      console.log('Already responding to an invitation, skipping fetch');
+      return;
+    }
+
     try {
       console.log('Fetching pending invitations...');
       const response = await fetch('http://192.168.0.12:5000/api/my-invitations', {
@@ -86,21 +117,25 @@ const GlobalInvitationHandler = () => {
         console.log('Found pending invitations:', invitations);
         
         if (invitations.length > 0) {
-          // Show the first pending invitation
-          const invitation = invitations[0];
+          // Show the first pending invitation that hasn't been processed
+          const pendingInvitation = invitations.find(inv => 
+            !processedInvitations.has(inv.id)
+          );
           
-          // Convert the API format to socket format
-          const formattedInvitation = {
-            invitationId: invitation.id,
-            gameType: invitation.game_type,
-            invitedBy: invitation.invited_by_username,
-            teamSlot: invitation.team_slot,
-            expiresAt: invitation.expires_at
-          };
-          
-          setCurrentInvitation(formattedInvitation);
-          setShowModal(true);
-          console.log('Showing pending invitation:', formattedInvitation);
+          if (pendingInvitation) {
+            // Convert the API format to socket format
+            const formattedInvitation = {
+              invitationId: pendingInvitation.id,
+              gameType: pendingInvitation.game_type,
+              invitedBy: pendingInvitation.invited_by_username,
+              teamSlot: pendingInvitation.team_slot,
+              expiresAt: pendingInvitation.expires_at
+            };
+            
+            setCurrentInvitation(formattedInvitation);
+            setShowModal(true);
+            console.log('Showing pending invitation:', formattedInvitation);
+          }
         }
       }
     } catch (error) {
@@ -125,34 +160,43 @@ const GlobalInvitationHandler = () => {
       return;
     }
     
+    if (isResponding) {
+      console.log('Already responding to an invitation');
+      return;
+    }
+    
+    setIsResponding(true);
+    
     // Mark this invitation as processed so we don't show it again
     setProcessedInvitations(prev => new Set(prev).add(invitationId));
     
     // Send response via socket
     socket.emit('respond_to_invitation', { invitationId, response });
     
-    // Close modal
-    setShowModal(false);
-    setCurrentInvitation(null);
-    console.log('GlobalInvitationHandler: Modal closed after response');
-    
-    // If there are more pending invitations, show the next one after a short delay
-    setTimeout(() => {
-      fetchAndShowPendingInvitation();
-    }, 1000);
+    console.log('GlobalInvitationHandler: Response sent, waiting for confirmation');
   };
 
   const handleCloseModal = () => {
-    console.log('GlobalInvitationHandler: Modal closed manually');
-    // Note: We don't close the modal on manual close anymore
-    // The modal only closes when user accepts/declines
-    
-    // Optional: You could add a "Remind me later" functionality here
-    // For now, the modal stays open
-    
-    // If you want to allow closing without responding, uncomment below:
-    // setShowModal(false);
-    // setCurrentInvitation(null);
+    console.log('GlobalInvitationHandler: Modal close requested');
+    // Only allow closing if not responding and invitation has expired
+    if (!isResponding && currentInvitation) {
+      const now = new Date();
+      const expiresAt = new Date(currentInvitation.expiresAt);
+      
+      if (now >= expiresAt) {
+        console.log('Invitation expired, closing modal');
+        setShowModal(false);
+        setCurrentInvitation(null);
+        setProcessedInvitations(prev => new Set(prev).add(currentInvitation.invitationId));
+        
+        // Check for more pending invitations
+        setTimeout(() => {
+          fetchAndShowPendingInvitation();
+        }, 1000);
+      } else {
+        console.log('Cannot close modal - invitation still active');
+      }
+    }
   };
 
   // Add some debug info to the render
@@ -160,39 +204,12 @@ const GlobalInvitationHandler = () => {
     hasUser: !!user, 
     hasSocket: !!socket, 
     hasInvitation: !!currentInvitation, 
-    showModal 
+    showModal,
+    isResponding
   });
 
   return (
     <>
-      {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div 
-          style={{ 
-            position: 'fixed', 
-            top: 0, 
-            right: 0, 
-            background: '#f0f0f0', 
-            padding: '10px', 
-            fontSize: '12px',
-            zIndex: 9999,
-            border: '1px solid #ccc'
-          }}
-        >
-          <div>User: {user?.username || 'None'}</div>
-          <div>Socket: {socket ? 'Connected' : 'Disconnected'}</div>
-          <div>Modal: {showModal ? 'Visible' : 'Hidden'}</div>
-          <div>Invitation: {currentInvitation ? 'Yes' : 'No'}</div>
-          <div>Processed: {processedInvitations.size}</div>
-          <button 
-            onClick={fetchAndShowPendingInvitation}
-            style={{ fontSize: '10px', marginTop: '5px' }}
-          >
-            Refresh Invitations
-          </button>
-        </div>
-      )}
-      
       <GameInvitationModal
         invitation={currentInvitation}
         show={showModal}
