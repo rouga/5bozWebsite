@@ -93,7 +93,7 @@ function App() {
               </li>
               <li className="nav-item fw-semibold fs-5 me-1">
                 <NavLink onClick={handleNavItemClick} to="/ludo" className={({ isActive }) => `nav-link d-inline-flex align-items-center title-color ${isActive ? 'text-primary ' : ''}`}>
-                  <img className="me-2" src="/ludo.png" width={15} alt="ludo" /> <span className="me-1">Ludo</span>
+                  <img className="me-2" src="./ludo.png" width={15} alt="ludo" /> <span className="me-1">Ludo</span>
                 </NavLink>
               </li>
               

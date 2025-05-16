@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FormInput, StatusAlert } from '../src/components';
 
 export default function SignupPage() {
   const [form, setForm] = useState({ username: '', password: '', code: '' });
@@ -55,92 +56,50 @@ export default function SignupPage() {
               </div>
 
               {/* Status Messages */}
-              {status && (
-                <div className={`alert alert-${status.type === 'success' ? 'success' : 'danger'} d-flex align-items-center mb-4`}>
-                  <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
-                  {status.message}
-                </div>
-              )}
+              <StatusAlert status={status} className="mb-4" />
 
               {/* Signup Form */}
               <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label htmlFor="username" className="form-label fw-semibold">Username</label>
-                  <div className="input-group input-group-lg">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="bi bi-person text-muted"></i>
-                    </span>
-                    <input 
-                      type="text" 
-                      className="form-control border-start-0" 
-                      id="username"
-                      name="username" 
-                      value={form.username} 
-                      onChange={handleChange} 
-                      placeholder="Choose a username"
-                      required 
-                      autoComplete="username"
-                    />
-                  </div>
-                  <div className="form-text">
-                    <small className="text-muted">
-                      <i className="bi bi-info-circle me-1"></i>
-                      Max 20 characters, cannot start with a number
-                    </small>
-                  </div>
-                </div>
+                <FormInput
+                  label="Username"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  placeholder="Choose a username"
+                  required
+                  autoComplete="username"
+                  icon="bi-person"
+                  size="large"
+                  helpText="Max 20 characters, cannot start with a number"
+                />
 
-                <div className="mb-4">
-                  <label htmlFor="password" className="form-label fw-semibold">Password</label>
-                  <div className="input-group input-group-lg">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="bi bi-lock text-muted"></i>
-                    </span>
-                    <input 
-                      type="password" 
-                      className="form-control border-start-0" 
-                      id="password"
-                      name="password" 
-                      value={form.password} 
-                      onChange={handleChange} 
-                      placeholder="Create a password"
-                      required 
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <div className="form-text">
-                    <small className="text-muted">
-                      <i className="bi bi-shield-check me-1"></i>
-                      At least 6 characters
-                    </small>
-                  </div>
-                </div>
+                <FormInput
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Create a password"
+                  required
+                  autoComplete="new-password"
+                  icon="bi-lock"
+                  size="large"
+                  helpText="At least 6 characters"
+                />
 
-                <div className="mb-4">
-                  <label htmlFor="code" className="form-label fw-semibold">Secret Code</label>
-                  <div className="input-group input-group-lg">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="bi bi-key text-muted"></i>
-                    </span>
-                    <input
-                      type="password"
-                      className="form-control border-start-0"
-                      id="code"
-                      name="code"
-                      value={form.code}
-                      onChange={handleChange}
-                      placeholder="Enter invitation code"
-                      required
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="form-text">
-                    <small className="text-muted">
-                      <i className="bi bi-shield-lock me-1"></i>
-                      You need an invitation code to create an account
-                    </small>
-                  </div>
-                </div>
+                <FormInput
+                  label="Secret Code"
+                  type="password"
+                  name="code"
+                  value={form.code}
+                  onChange={handleChange}
+                  placeholder="Enter invitation code"
+                  required
+                  autoComplete="off"
+                  icon="bi-key"
+                  size="large"
+                  helpText="You need an invitation code to create an account"
+                />
 
                 <button 
                   type="submit" 

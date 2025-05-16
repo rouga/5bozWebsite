@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FormInput, StatusAlert, LoadingOverlay } from '../src/components/';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -110,16 +111,7 @@ export default function ProfilePage() {
   };
 
   if (user.loading) {
-    return (
-      <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center">
-        <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <h5 className="text-muted">Loading profile...</h5>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay text="Loading profile..." />;
   }
 
   if (user.error) {
@@ -127,10 +119,7 @@ export default function ProfilePage() {
       <div className="container mt-5">
         <div className="row justify-content-center">
           <div className="col-12 col-md-8 col-lg-6">
-            <div className="alert alert-danger d-flex align-items-center">
-              <i className="bi bi-exclamation-triangle-fill me-2"></i>
-              {user.error}
-            </div>
+            <StatusAlert status={{ type: 'error', message: user.error }} />
           </div>
         </div>
       </div>
@@ -160,12 +149,7 @@ export default function ProfilePage() {
 
             <div className="card-body p-4">
               {/* Status Messages */}
-              {status && (
-                <div className={`alert alert-${status.type === 'success' ? 'success' : 'danger'} d-flex align-items-center mb-4`}>
-                  <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
-                  {status.message}
-                </div>
-              )}
+              <StatusAlert status={status} className="mb-4" />
 
               {/* Profile Section */}
               <div className="row">
@@ -222,68 +206,40 @@ export default function ProfilePage() {
                       </div>
                       <div className="card-body p-4">
                         <form onSubmit={handleSubmit}>
-                          <div className="mb-4">
-                            <label htmlFor="currentPassword" className="form-label fw-semibold">Current Password</label>
-                            <div className="input-group">
-                              <span className="input-group-text bg-light">
-                                <i className="bi bi-lock text-muted"></i>
-                              </span>
-                              <input 
-                                type="password" 
-                                className="form-control" 
-                                id="currentPassword"
-                                name="currentPassword" 
-                                value={form.currentPassword} 
-                                onChange={handleChange} 
-                                placeholder="Enter current password"
-                                required 
-                              />
-                            </div>
-                          </div>
+                          <FormInput
+                            label="Current Password"
+                            type="password"
+                            name="currentPassword"
+                            value={form.currentPassword}
+                            onChange={handleChange}
+                            placeholder="Enter current password"
+                            required
+                            icon="bi-lock"
+                          />
                           
-                          <div className="mb-4">
-                            <label htmlFor="newPassword" className="form-label fw-semibold">New Password</label>
-                            <div className="input-group">
-                              <span className="input-group-text bg-light">
-                                <i className="bi bi-key text-muted"></i>
-                              </span>
-                              <input 
-                                type="password" 
-                                className="form-control" 
-                                id="newPassword"
-                                name="newPassword" 
-                                value={form.newPassword} 
-                                onChange={handleChange} 
-                                placeholder="Enter new password"
-                                required 
-                              />
-                            </div>
-                            <div className="form-text">
-                              <small className="text-muted">
-                                <i className="bi bi-info-circle me-1"></i>
-                                At least 6 characters required
-                              </small>
-                            </div>
-                          </div>
+                          <FormInput
+                            label="New Password"
+                            type="password"
+                            name="newPassword"
+                            value={form.newPassword}
+                            onChange={handleChange}
+                            placeholder="Enter new password"
+                            required
+                            icon="bi-key"
+                            helpText="At least 6 characters required"
+                          />
                           
-                          <div className="mb-4">
-                            <label htmlFor="confirmNewPassword" className="form-label fw-semibold">Confirm New Password</label>
-                            <div className="input-group">
-                              <span className="input-group-text bg-light">
-                                <i className="bi bi-check-circle text-muted"></i>
-                              </span>
-                              <input 
-                                type="password" 
-                                className="form-control" 
-                                id="confirmNewPassword"
-                                name="confirmNewPassword" 
-                                value={form.confirmNewPassword} 
-                                onChange={handleChange} 
-                                placeholder="Confirm new password"
-                                required 
-                              />
-                            </div>
-                          </div>
+                          <FormInput
+                            label="Confirm New Password"
+                            type="password"
+                            name="confirmNewPassword"
+                            value={form.confirmNewPassword}
+                            onChange={handleChange}
+                            placeholder="Confirm new password"
+                            required
+                            icon="bi-check-circle"
+                            className="mb-4"
+                          />
                           
                           <div className="d-flex gap-3">
                             <button type="submit" className="btn btn-success flex-grow-1">

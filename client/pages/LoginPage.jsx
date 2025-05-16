@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../src/hooks/useAuth';
+import useStatus from '../src/hooks/useStatus';
+import { FormInput, StatusAlert } from '../src/components';
+import { authAPI, handleApiError } from '../src/utils/api';
 
 export default function LoginPage({ refreshUser }) {
   const [form, setForm] = useState({ username: '', password: '' });
-  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [_, setUser] = useAuth();
   const navigate = useNavigate();
+  const { status, showSuccess, showError } = useStatus();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,64 +18,42 @@ export default function LoginPage({ refreshUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     setLoading(true);
     
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-        credentials: 'include'
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setStatus({ type: 'success', message: data.message });
+      // Login
+      const loginData = await authAPI.login(form);
+      showSuccess(loginData.message);
+      
+      // Get user info after successful login
+      const userData = await authAPI.getMe();
+      
+      if (userData.loggedIn) {
+        console.log("User logged in:", userData);
         
-        // Get user info after successful login
-        try {
-          const userRes = await fetch('http://192.168.0.12:5000/api/me', {
-            credentials: 'include'
-          });
-          
-          const userData = await userRes.json();
-          
-          if (userData.loggedIn) {
-            console.log("User logged in:", userData);
-            
-            // Update user state with the logged-in user data
-            setUser({ 
-              id: userData.userId, 
-              username: userData.username 
-            });
-            
-            // Call the refreshUser function passed from App
-            if (refreshUser) {
-              await refreshUser();
-            }
-            
-            // Redirect to homepage after a short delay
-            setTimeout(() => {
-              navigate('/');
-            }, 500);
-          }
-        } catch (userErr) {
-          console.error("Failed to fetch user data:", userErr);
+        // Update user state with the logged-in user data
+        setUser({ 
+          id: userData.userId, 
+          username: userData.username 
+        });
+        
+        // Call the refreshUser function passed from App
+        if (refreshUser) {
+          await refreshUser();
         }
-      } else {
-        setStatus({ type: 'error', message: data.error || 'Login failed' });
+        
+        // Redirect to homepage after a short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 500);
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setStatus({ type: 'error', message: 'Network error. Try again later.' });
+    } catch (error) {
+      handleApiError(error, (errStatus) => showError(errStatus.message));
     } finally {
       setLoading(false);
+      // Clear password field
+      setForm(prev => ({ ...prev, password: '' }));
     }
-    
-    // Clear password field
-    setForm(prev => ({ ...prev, password: '' }));
   };
 
   return (
@@ -91,54 +72,34 @@ export default function LoginPage({ refreshUser }) {
               </div>
 
               {/* Status Messages */}
-              {status && (
-                <div className={`alert alert-${status.type === 'success' ? 'success' : 'danger'} d-flex align-items-center mb-4`}>
-                  <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
-                  {status.message}
-                </div>
-              )}
+              <StatusAlert status={status} className="mb-4" />
 
               {/* Login Form */}
               <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label htmlFor="username" className="form-label fw-semibold">Username</label>
-                  <div className="input-group input-group-lg">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="bi bi-person text-muted"></i>
-                    </span>
-                    <input 
-                      type="text" 
-                      className="form-control border-start-0" 
-                      id="username"
-                      name="username" 
-                      value={form.username} 
-                      onChange={handleChange} 
-                      placeholder="Enter your username"
-                      required 
-                      autoComplete="username"
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label="Username"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  placeholder="Enter your username"
+                  required
+                  autoComplete="username"
+                  icon="bi-person"
+                  size="large"
+                />
 
-                <div className="mb-4">
-                  <label htmlFor="password" className="form-label fw-semibold">Password</label>
-                  <div className="input-group input-group-lg">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="bi bi-lock text-muted"></i>
-                    </span>
-                    <input 
-                      type="password" 
-                      className="form-control border-start-0" 
-                      id="password"
-                      name="password" 
-                      value={form.password} 
-                      onChange={handleChange} 
-                      placeholder="Enter your password"
-                      required 
-                      autoComplete="current-password"
-                    />
-                  </div>
-                </div>
+                <FormInput
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  required
+                  autoComplete="current-password"
+                  icon="bi-lock"
+                  size="large"
+                />
 
                 <button 
                   type="submit" 
