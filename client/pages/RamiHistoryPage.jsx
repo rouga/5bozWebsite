@@ -139,9 +139,26 @@ export default function RamiHistoryPage() {
   // Function to format game result for card display
   const formatGameResult = (game) => {
     if (game.type === 'chkan') {
+      // Parse player scores
+      const playerScores = game.player_scores ? game.player_scores.split(', ') : [];
+      const players = playerScores.map(scoreStr => {
+        const parts = scoreStr.split(': ');
+        return {
+          name: parts[0],
+          score: parseInt(parts[1]) || 0
+        };
+      });
+      
+      // Sort players by score (lowest first)
+      players.sort((a, b) => a.score - b.score);
+      
+      // Determine winners (below 701)
+      const winners = players.filter(p => p.score < 701);
+      const hasWinners = winners.length > 0;
+      
       return (
         <div>
-          <div className="d-flex justify-content-between align-items-center mb-2">
+          <div className="d-flex justify-content-between align-items-center mb-3">
             <span className="badge bg-info rounded-pill">🎯 Chkan</span>
             <small className="text-muted">
               {new Date(game.played_at).toLocaleDateString('en-US', {
@@ -151,15 +168,37 @@ export default function RamiHistoryPage() {
               })}
             </small>
           </div>
-          <div className="mt-2">
-            <span className="text-success fw-medium">Winners:</span>
-            <div className="fw-semibold text-dark mt-1">
-              {game.winners || 'No winners'}
+          
+          {/* Player scores grid */}
+          <div className="row g-2 mb-3">
+            {players.map((player, index) => {
+              const isWinner = hasWinners ? player.score < 701 : index === 0;
+              return (
+                <div key={index} className="col-6">
+                  <div className={`text-center p-2 rounded ${isWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                    <div className="fw-bold small text-muted">
+                      {isWinner && hasWinners ? 'WINNER' : `PLAYER ${index + 1}`}
+                    </div>
+                    <div className="fw-semibold small">{player.name}</div>
+                    <div className={`h6 mb-0 ${isWinner ? 'text-success' : 'text-primary'}`}>
+                      {player.score}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Winners summary */}
+          {hasWinners && (
+            <div className="border-top pt-2">
+              <div className="text-center">
+                <span className="text-success fw-medium small">
+                  🏆 {winners.length} Winner{winners.length > 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="small text-muted mt-2">
-            {game.player_scores}
-          </div>
+          )}
         </div>
       );
     } else {
