@@ -7,3 +7,4 @@ export { default as SectionCard } from './SectionCard';
 export { default as EmptyState } from './EmptyState';
 export { default as GameDetails } from './GameDetails';
 export { default as GameTypeCard } from './GameTypeCard';
+export { default as LiveScoresCard } from './LiveScoresCard';

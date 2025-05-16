@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { GameCard, PageHeader, SectionCard, EmptyState } from '../src/components';
+import { GameCard, PageHeader, SectionCard, EmptyState, LiveScoresCard } from '../src/components';
+import { gameAPI } from '../src/utils/api';
 
 function HomePage() {
   const [scores, setScores] = useState([]);
+  const [activeGames, setActiveGames] = useState([]);
+  const [loadingActiveGames, setLoadingActiveGames] = useState(true);
+  const [activeGamesError, setActiveGamesError] = useState(null);
   const [activeTab, setActiveTab] = useState('rami');
 
   useEffect(() => {
     fetchScores();
+    fetchActiveGames();
+    
+    // Set up polling for active games (refresh every 30 seconds)
+    const interval = setInterval(fetchActiveGames, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchScores = async () => {
@@ -19,6 +29,20 @@ function HomePage() {
       }
     } catch (error) {
       console.error('Error fetching scores:', error);
+    }
+  };
+
+  const fetchActiveGames = async () => {
+    try {
+      setLoadingActiveGames(true);
+      setActiveGamesError(null);
+      const data = await gameAPI.getActiveGames();
+      setActiveGames(data);
+    } catch (error) {
+      console.error('Error fetching active games:', error);
+      setActiveGamesError('Failed to load active games');
+    } finally {
+      setLoadingActiveGames(false);
     }
   };
 
@@ -63,6 +87,19 @@ function HomePage() {
             }
             gradient={true}
           />
+
+          {/* Live Scores Section */}
+          <SectionCard
+            title="🔴 Live Games"
+            subtitle="Games currently in progress"
+            className="mb-4"
+          >
+            <LiveScoresCard 
+              activeGames={activeGames}
+              loading={loadingActiveGames}
+              error={activeGamesError}
+            />
+          </SectionCard>
 
           {/* Games Section */}
           <SectionCard

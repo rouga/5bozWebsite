@@ -203,6 +203,37 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
+app.get('/api/active-games', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        ag.id,
+        ag.game_state,
+        ag.game_type,
+        ag.created_at,
+        ag.updated_at,
+        u.username
+      FROM active_games ag
+      JOIN users u ON ag.user_id = u.id
+      ORDER BY ag.updated_at DESC
+    `);
+
+    const activeGames = result.rows.map(row => ({
+      id: row.id,
+      gameState: row.game_state,
+      gameType: row.game_type,
+      username: row.username,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    res.json(activeGames);
+  } catch (err) {
+    console.error('Error fetching active games:', err);
+    res.status(500).json({ error: 'Failed to fetch active games' });
+  }
+});
+
 // Signup request
 app.post('/api/signup', async (req, res) => {
   const { username, password, code } = req.body;
@@ -338,5 +369,7 @@ app.post('/api/logout', (req, res) => {
     res.json({ message: 'Logout successful' });
   });
 });
+
+
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

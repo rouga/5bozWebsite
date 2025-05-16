@@ -1,13 +1,9 @@
-// This is a partial refactor of RamiPage.jsx focusing on the duplicated components
-// The formatGameResult function would be replaced with the GameCard component
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../src/hooks/useAuth';
 import { 
   GameCard, 
   LoadingSpinner, 
-  LoadingOverlay, 
   StatusAlert, 
   PageHeader, 
   SectionCard, 
@@ -15,9 +11,9 @@ import {
   GameTypeCard,
   FormInput
 } from '../src/components';
+import { gameAPI, handleApiError } from '../src/utils/api';
 
 export default function RamiPage() {
-  // ... (keeping all the same state and effect logic as before)
   const [user] = useAuth();
   const [gameState, setGameState] = useState(null);
   const [scores, setScores] = useState([]);
@@ -34,20 +30,274 @@ export default function RamiPage() {
   const [numberOfPlayers, setNumberOfPlayers] = useState(3);
   const scoresPerPage = 5;
 
-  // ... (keeping all the existing useEffect hooks and functions)
+  useEffect(() => {
+    fetchScores();
+    if (user) {
+      checkForActiveGame();
+    } else {
+      setLoadingActiveGame(false);
+    }
+  }, [user]);
 
-  // Updated formatGameResult function - replace with GameCard component
-  const renderGameCards = () => (
-    <div className="row g-3">
-      {scores.map(game => (
-        <div key={game.id} className="col-12 col-md-6 col-lg-4">
-          <GameCard game={game} />
-        </div>
-      ))}
-    </div>
-  );
+  const fetchScores = async () => {
+    try {
+      setLoading(true);
+      const data = await gameAPI.getScores(page, scoresPerPage);
+      
+      if (data.length < scoresPerPage) {
+        setHasMore(false);
+      }
+      
+      setScores(prev => page === 1 ? data : [...prev, ...data]);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching scores:', err);
+      setError('Failed to load recent games. Please try again later.');
+      setLoading(false);
+    }
+  };
 
-  // Game type selection section with GameTypeCard
+  const checkForActiveGame = async () => {
+    try {
+      setLoadingActiveGame(true);
+      const data = await gameAPI.getActiveGame();
+      
+      if (data.hasActiveGame) {
+        setGameState(data.gameState);
+        setGameType(data.gameType);
+        setShowForm(true);
+        initializeRoundScores(data.gameState);
+      }
+    } catch (err) {
+      console.error('Error checking for active game:', err);
+    } finally {
+      setLoadingActiveGame(false);
+    }
+  };
+
+  const initializeRoundScores = (state) => {
+    const newRoundScores = {};
+    if (state.type === 'chkan') {
+      state.players.forEach((_, index) => {
+        newRoundScores[`player-${index}`] = '';
+      });
+    } else {
+      newRoundScores['team-0'] = '';
+      newRoundScores['team-1'] = '';
+    }
+    setRoundScores(newRoundScores);
+  };
+
+  const initializeGame = (type, numPlayers = 2) => {
+    let initialState;
+    
+    if (type === 'chkan') {
+      const players = [];
+      for (let i = 0; i < numPlayers; i++) {
+        players.push({
+          name: `Player ${i + 1}`,
+          scores: []
+        });
+      }
+      initialState = {
+        type,
+        players,
+        currentRound: 1
+      };
+    } else {
+      initialState = {
+        type,
+        teams: [
+          { name: 'Team 1', scores: [] },
+          { name: 'Team 2', scores: [] }
+        ],
+        currentRound: 1
+      };
+    }
+    
+    setGameState(initialState);
+    setGameType(type);
+    initializeRoundScores(initialState);
+  };
+
+  const handlePlayerNameChange = (index, newName) => {
+    const updatedState = { ...gameState };
+    updatedState.players[index].name = newName;
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  };
+
+  const handleTeamNameChange = (index, newName) => {
+    const updatedState = { ...gameState };
+    updatedState.teams[index].name = newName;
+    setGameState(updatedState);
+    saveGameState(updatedState);
+  };
+
+  const handleRoundScoreChange = (key, value) => {
+    setRoundScores({ ...roundScores, [key]: value });
+    setRoundInputError(null);
+  };
+
+  const addRound = async () => {
+    setRoundInputError(null);
+    
+    // Validate all scores are entered
+    const scores = Object.values(roundScores);
+    if (scores.some(score => score === '' || score === null)) {
+      setRoundInputError('Please enter scores for all players/teams');
+      return;
+    }
+
+    // Validate scores are numbers
+    const numericScores = scores.map(score => parseInt(score));
+    if (numericScores.some(score => isNaN(score) || score < 0)) {
+      setRoundInputError('Scores must be positive numbers');
+      return;
+    }
+
+    const updatedState = { ...gameState };
+
+    if (gameType === 'chkan') {
+      updatedState.players.forEach((player, index) => {
+        const scoreKey = `player-${index}`;
+        player.scores.push(parseInt(roundScores[scoreKey]));
+      });
+    } else {
+      updatedState.teams.forEach((team, index) => {
+        const scoreKey = `team-${index}`;
+        team.scores.push(parseInt(roundScores[scoreKey]));
+      });
+    }
+
+    updatedState.currentRound += 1;
+    setGameState(updatedState);
+    
+    // Clear round scores
+    const clearedScores = {};
+    Object.keys(roundScores).forEach(key => {
+      clearedScores[key] = '';
+    });
+    setRoundScores(clearedScores);
+
+    // Save the game state
+    await saveGameState(updatedState);
+  };
+
+  const saveGameState = async (state) => {
+    if (!user) return;
+    
+    try {
+      await gameAPI.saveActiveGame(state, gameType);
+    } catch (err) {
+      console.error('Error saving game state:', err);
+    }
+  };
+
+  const finishGame = async () => {
+    try {
+      setLoading(true);
+      
+      // Calculate final scores and determine winner(s)
+      let gameData;
+      
+      if (gameType === 'chkan') {
+        const playersWithTotals = gameState.players.map(player => ({
+          ...player,
+          totalScore: player.scores.reduce((sum, score) => sum + score, 0)
+        }));
+        
+        // Sort by total score for winners determination
+        const sortedPlayers = [...playersWithTotals].sort((a, b) => a.totalScore - b.totalScore);
+        const winners = sortedPlayers.filter(p => p.totalScore < 701);
+        const losers = sortedPlayers.filter(p => p.totalScore >= 701);
+        
+        gameData = {
+          type: 'chkan',
+          winners: winners.map(p => p.name).join(', ') || 'None',
+          losers: losers.map(p => p.name).join(', ') || 'None',
+          player_scores: playersWithTotals.map(p => `${p.name}: ${p.totalScore}`).join(', '),
+          game_data: {
+            ...gameState,
+            players: playersWithTotals,
+            winners: winners.map(p => p.name),
+            losers: losers.map(p => p.name)
+          }
+        };
+      } else {
+        // S7ab game
+        const teamsWithTotals = gameState.teams.map(team => ({
+          ...team,
+          totalScore: team.scores.reduce((sum, score) => sum + score, 0)
+        }));
+        
+        const sortedTeams = [...teamsWithTotals].sort((a, b) => a.totalScore - b.totalScore);
+        
+        gameData = {
+          type: 's7ab',
+          team1: teamsWithTotals[0].name,
+          team2: teamsWithTotals[1].name,
+          score1: teamsWithTotals[0].totalScore,
+          score2: teamsWithTotals[1].totalScore,
+          game_data: {
+            ...gameState,
+            teams: teamsWithTotals,
+            winner: sortedTeams[0].name
+          }
+        };
+      }
+
+      await gameAPI.saveGame(gameData);
+      await gameAPI.deleteActiveGame();
+      
+      setStatus({ type: 'success', message: 'Game completed successfully!' });
+      
+      // Reset game state
+      setGameState(null);
+      setGameType('');
+      setShowForm(false);
+      setRoundScores({});
+      
+      // Refresh scores list
+      setPage(1);
+      setHasMore(true);
+      fetchScores();
+      
+      setTimeout(() => setStatus(null), 5000);
+    } catch (err) {
+      console.error('Error finishing game:', err);
+      setStatus({ type: 'error', message: 'Failed to save game. Please try again.' });
+      setTimeout(() => setStatus(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelGame = async () => {
+    try {
+      await gameAPI.deleteActiveGame();
+      setGameState(null);
+      setGameType('');
+      setShowForm(false);
+      setRoundScores({});
+      setStatus({ type: 'info', message: 'Game cancelled.' });
+      setTimeout(() => setStatus(null), 3000);
+    } catch (err) {
+      console.error('Error cancelling game:', err);
+    }
+  };
+
+  const loadMore = () => {
+    setPage(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchScores();
+    }
+  }, [page]);
+
+  // Game setup section
   const renderGameSetup = () => {
     if (!gameType) {
       return (
@@ -61,7 +311,6 @@ export default function RamiPage() {
                 description="Individual play"
                 onClick={() => initializeGame('chkan', numberOfPlayers)}
               >
-                {/* Player count selection */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Number of Players</label>
                   <select 
@@ -108,7 +357,175 @@ export default function RamiPage() {
       );
     }
 
-    // ... (rest of the game setup logic remains the same)
+    return (
+      <div>
+        {/* Game Progress Header */}
+        <div className="card border-primary mb-4">
+          <div className="card-header bg-primary text-white">
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 className="mb-1">
+                  {gameType === 'chkan' ? '🎯 Chkan Game' : '🤝 S7ab Game'}
+                </h5>
+                <small>Round {gameState.currentRound}</small>
+              </div>
+              <div>
+                <button 
+                  className="btn btn-outline-light btn-sm me-2"
+                  onClick={cancelGame}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-light btn-sm"
+                  onClick={finishGame}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1"></span>
+                      Finishing...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-1"></i>
+                      Finish Game
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Current Standings */}
+        {gameState.currentRound > 1 && (
+          <div className="card mb-4">
+            <div className="card-header">
+              <h6 className="mb-0">Current Standings</h6>
+            </div>
+            <div className="card-body">
+              {gameType === 'chkan' ? (
+                <div className="row g-2">
+                  {gameState.players.map((player, index) => {
+                    const total = player.scores.reduce((sum, score) => sum + score, 0);
+                    return (
+                      <div key={index} className="col-6 col-md-3">
+                        <div className="text-center p-2 bg-light rounded">
+                          <div className="fw-semibold small">{player.name}</div>
+                          <div className="h5 mb-0 text-primary">{total}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="row g-2">
+                  {gameState.teams.map((team, index) => {
+                    const total = team.scores.reduce((sum, score) => sum + score, 0);
+                    return (
+                      <div key={index} className="col-6">
+                        <div className="text-center p-3 bg-light rounded">
+                          <div className="fw-semibold">{team.name}</div>
+                          <div className="h4 mb-0 text-primary">{total}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Round Entry Form */}
+        <div className="card">
+          <div className="card-header">
+            <h6 className="mb-0">
+              <i className="bi bi-plus-circle me-2"></i>
+              Add Round {gameState.currentRound} Scores
+            </h6>
+          </div>
+          <div className="card-body">
+            {roundInputError && (
+              <div className="alert alert-danger">
+                <i className="bi bi-exclamation-triangle me-2"></i>
+                {roundInputError}
+              </div>
+            )}
+
+            {gameType === 'chkan' ? (
+              <div className="row g-3">
+                {gameState.players.map((player, index) => (
+                  <div key={index} className="col-12 col-md-6">
+                    <FormInput
+                      label={
+                        gameState.currentRound === 1 ? (
+                          <input
+                            type="text"
+                            value={player.name}
+                            onChange={(e) => handlePlayerNameChange(index, e.target.value)}
+                            className="form-control form-control-sm fw-semibold"
+                            placeholder={`Player ${index + 1}`}
+                          />
+                        ) : (
+                          player.name
+                        )
+                      }
+                      type="number"
+                      name={`player-${index}`}
+                      value={roundScores[`player-${index}`] || ''}
+                      onChange={(e) => handleRoundScoreChange(`player-${index}`, e.target.value)}
+                      placeholder="Enter score"
+                      min="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="row g-3">
+                {gameState.teams.map((team, index) => (
+                  <div key={index} className="col-12 col-md-6">
+                    <FormInput
+                      label={
+                        gameState.currentRound === 1 ? (
+                          <input
+                            type="text"
+                            value={team.name}
+                            onChange={(e) => handleTeamNameChange(index, e.target.value)}
+                            className="form-control form-control-sm fw-semibold"
+                            placeholder={`Team ${index + 1}`}
+                          />
+                        ) : (
+                          team.name
+                        )
+                      }
+                      type="number"
+                      name={`team-${index}`}
+                      value={roundScores[`team-${index}`] || ''}
+                      onChange={(e) => handleRoundScoreChange(`team-${index}`, e.target.value)}
+                      placeholder="Enter score"
+                      min="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center mt-4">
+              <button 
+                className="btn btn-primary btn-lg px-4"
+                onClick={addRound}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Round {gameState.currentRound}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -191,7 +608,13 @@ export default function RamiPage() {
               />
             ) : (
               <>
-                {renderGameCards()}
+                <div className="row g-3">
+                  {scores.map(game => (
+                    <div key={game.id} className="col-12 col-md-6 col-lg-4">
+                      <GameCard game={game} />
+                    </div>
+                  ))}
+                </div>
                 
                 {loading && (
                   <LoadingSpinner text="Loading games..." className="my-4" />

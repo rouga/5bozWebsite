@@ -63,7 +63,9 @@ export const gameAPI = {
     body: JSON.stringify({ gameState, gameType })
   }),
   
-  deleteActiveGame: () => apiCall('/api/active-game', { method: 'DELETE' })
+  deleteActiveGame: () => apiCall('/api/active-game', { method: 'DELETE' }),
+  
+  getActiveGames: () => apiCall('/api/active-games')
 };
 
 // Error handler utility
