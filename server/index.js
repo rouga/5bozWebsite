@@ -27,6 +27,163 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+const http = require('http');
+const initializeSocket = require('./socket');
+
+// Replace app.listen with this:
+const server = http.createServer(app);
+const { io, userSockets } = initializeSocket(server);
+
+// Make io and userSockets available to routes
+app.locals.io = io;
+app.locals.userSockets = userSockets;
+
+// Game invitation endpoints
+
+// Send game invitations to registered players
+app.post('/api/game-invitations', async (req, res) => {
+  const userId = req.session.userId;
+  const { gameType, players, gameId } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in to send invitations' });
+  }
+
+  try {
+    const invitations = [];
+    
+    for (const player of players) {
+      if (player.isRegistered) {
+        // Get user ID from username
+        const userResult = await pool.query(
+          'SELECT id FROM users WHERE username = $1',
+          [player.username]
+        );
+
+        if (userResult.rows.length > 0) {
+          const invitedUserId = userResult.rows[0].id;
+          
+          // Skip if inviting yourself
+          if (invitedUserId === userId) {
+            continue;
+          }
+
+          // Create invitation
+          const inviteResult = await pool.query(`
+            INSERT INTO game_invitations (game_id, invited_by, invited_user, game_type, team_slot, session_data)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+          `, [
+            gameId,
+            userId,
+            invitedUserId,
+            gameType,
+            player.teamSlot,
+            JSON.stringify(players)
+          ]);
+
+          const invitation = inviteResult.rows[0];
+          invitations.push(invitation);
+
+          // Send real-time notification to the invited user
+          const invitedSocketId = userSockets.get(invitedUserId);
+          if (invitedSocketId) {
+            // Get inviter username
+            const inviterResult = await pool.query(
+              'SELECT username FROM users WHERE id = $1',
+              [userId]
+            );
+            
+            io.to(invitedSocketId).emit('game_invitation', {
+              invitationId: invitation.id,
+              gameType,
+              invitedBy: inviterResult.rows[0].username,
+              teamSlot: player.teamSlot,
+              expiresAt: invitation.expires_at
+            });
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      invitationsSent: invitations.length,
+      invitations
+    });
+
+  } catch (error) {
+    console.error('Error sending game invitations:', error);
+    res.status(500).json({ error: 'Failed to send invitations' });
+  }
+});
+
+// Get pending invitations for a user
+app.get('/api/my-invitations', async (req, res) => {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT gi.*, u.username as invited_by_username
+      FROM game_invitations gi
+      JOIN users u ON gi.invited_by = u.id
+      WHERE gi.invited_user = $1 AND gi.status = 'pending' AND gi.expires_at > NOW()
+      ORDER BY gi.created_at DESC
+    `, [userId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    res.status(500).json({ error: 'Failed to fetch invitations' });
+  }
+});
+
+// Get invitation status for a game
+app.get('/api/game-invitations/:gameId', async (req, res) => {
+  const { gameId } = req.params;
+  const userId = req.session.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Must be logged in' });
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT gi.*, u.username as invited_username
+      FROM game_invitations gi
+      JOIN users u ON gi.invited_user = u.id
+      WHERE gi.game_id = $1 AND gi.invited_by = $2
+      ORDER BY gi.created_at DESC
+    `, [gameId, userId]);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching game invitations:', error);
+    res.status(500).json({ error: 'Failed to fetch game invitations' });
+  }
+});
+
+// Expire old invitations (run periodically)
+app.post('/api/cleanup-invitations', async (req, res) => {
+  try {
+    await pool.query(`
+      UPDATE game_invitations 
+      SET status = 'expired' 
+      WHERE status = 'pending' AND expires_at < NOW()
+    `);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error cleaning up invitations:', error);
+    res.status(500).json({ error: 'Failed to cleanup invitations' });
+  }
+});
+
+
 // Save or update active game state
 app.post('/api/active-game', async (req, res) => {
   const userId = req.session.userId;

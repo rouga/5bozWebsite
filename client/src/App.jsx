@@ -9,9 +9,12 @@ import SignupPage from '../pages/SignupPage';
 import LoginPage from '../pages/LoginPage';
 import ProfilePage from '../pages/ProfilePage';
 import useAuth from './hooks/useAuth';
+import useSocket from './hooks/useSocket';
+import { InvitationNotificationBadge } from './components';
 
 function App() {
   const [user, setUser, refreshUser] = useAuth();
+  const socket = useSocket();
   const navCollapseRef = useRef(null);
   const navigate = useNavigate();
 
@@ -82,8 +85,9 @@ function App() {
                 </NavLink>
               </li>
               <li className="nav-item fw-semibold fs-5 me-1">
-                <NavLink onClick={handleNavItemClick} to="/rami" className={({ isActive }) => `nav-link d-inline-flex align-items-center title-color ${isActive ? 'text-primary ' : ''}`}>
+                <NavLink onClick={handleNavItemClick} to="/rami" className={({ isActive }) => `nav-link d-inline-flex align-items-center title-color position-relative ${isActive ? 'text-primary ' : ''}`}>
                   <span className="me-1">♠️</span> Rami
+                  <InvitationNotificationBadge />
                 </NavLink>
               </li>
               <li className="nav-item fw-semibold fs-5 me-1">
