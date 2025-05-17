@@ -1,3 +1,4 @@
+// client/src/components/FormInput.jsx
 import React from 'react';
 
 const FormInput = ({
@@ -37,7 +38,7 @@ const FormInput = ({
         )}
         <input
           type={type}
-          className={`form-control ${inputSizeClass} ${icon ? 'border-start-0' : ''} ${inputClassName}`}
+          className={`form-control ${inputSizeClass} ${icon ? 'border-start-0' : ''} ${error ? 'is-invalid' : ''} ${inputClassName}`}
           id={name}
           name={name}
           value={value}
@@ -49,8 +50,11 @@ const FormInput = ({
           min={min}
           disabled={disabled}
         />
+        {error && (
+          <div className="invalid-feedback">{error}</div>
+        )}
       </div>
-      {helpText && (
+      {helpText && !error && (
         <div className="form-text">
           <small className="text-muted">
             <i className="bi bi-info-circle me-1"></i>
@@ -59,7 +63,7 @@ const FormInput = ({
         </div>
       )}
       {error && (
-        <div className="form-text text-danger">
+        <div className="form-text text-danger d-block">
           <small>
             <i className="bi bi-exclamation-triangle me-1"></i>
             {error}

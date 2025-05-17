@@ -1,4 +1,4 @@
-// client/pages/RamiPage.jsx - Full clean version with modifications
+// client/pages/RamiPage.jsx - Complete updated version with username validation
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../src/hooks/useAuth';
@@ -175,6 +175,39 @@ export default function RamiPage() {
     setChkanCustomInputs({});
   };
 
+  // Helper functions for username validation
+  const isDuplicateUsername = (username) => {
+    if (!username) return false;
+    
+    const normalizedUsername = username.toLowerCase().trim();
+    
+    if (gameType === 'chkan') {
+      const usedNames = Object.values(chkanPlayers)
+        .filter(name => name && name.trim() !== '')
+        .map(name => name.toLowerCase().trim());
+      
+      return usedNames.filter(name => name === normalizedUsername).length > 1;
+    } else {
+      const allNames = [
+        teamPlayers.team1.player1,
+        teamPlayers.team1.player2,
+        teamPlayers.team2.player1,
+        teamPlayers.team2.player2
+      ].filter(name => name && name.trim() !== '')
+        .map(name => name.toLowerCase().trim());
+      
+      return allNames.filter(name => name === normalizedUsername).length > 1;
+    }
+  };
+
+  // Check if a custom name conflicts with registered users
+  const isRegisteredUsername = (username) => {
+    if (!username) return false;
+    
+    const normalizedUsername = username.toLowerCase().trim();
+    return registeredUsers.some(user => user.username.toLowerCase() === normalizedUsername);
+  };
+
   // API calls
   const fetchRegisteredUsers = async () => {
     try {
@@ -318,12 +351,20 @@ export default function RamiPage() {
     let selectedPlayers;
     
     if (gameType === 'chkan') {
+      // Get all selected players
       selectedPlayers = Object.values(chkanPlayers)
         .filter(p => p.trim() !== '')
         .map(username => ({ username }));
       
       if (selectedPlayers.length !== numberOfPlayers) {
         setRoundInputError(`Veuillez sélectionner tous les ${numberOfPlayers} joueurs`);
+        return;
+      }
+      
+      // Check for duplicates
+      const uniqueNames = new Set(selectedPlayers.map(p => p.username.toLowerCase()));
+      if (uniqueNames.size !== selectedPlayers.length) {
+        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
         return;
       }
     } else {
@@ -335,7 +376,28 @@ export default function RamiPage() {
         return;
       }
       
-      selectedPlayers = [...team1Players, ...team2Players].map(username => ({ username }));
+      // Combine all players and check for duplicates
+      const allPlayers = [...team1Players, ...team2Players];
+      selectedPlayers = allPlayers.map(username => ({ username }));
+      
+      const uniqueNames = new Set(allPlayers.map(name => name.toLowerCase()));
+      if (uniqueNames.size !== allPlayers.length) {
+        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
+        return;
+      }
+    }
+    
+    // Additional validation: Make sure manually entered names don't conflict with registered users
+    const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
+    const customNames = selectedPlayers
+      .filter(p => !registeredUsernames.includes(p.username.toLowerCase()))
+      .map(p => p.username.toLowerCase());
+    
+    const hasConflict = customNames.some(name => registeredUsernames.includes(name));
+    
+    if (hasConflict) {
+      setRoundInputError(`Un nom saisi manuellement est identique à un nom d'utilisateur déjà enregistré`);
+      return;
     }
     
     // Send invitations to registered players
@@ -351,7 +413,7 @@ export default function RamiPage() {
     
     // Determine which players are registered
     const playersWithRegistrationStatus = selectedPlayers.map((player, index) => {
-      const isRegistered = registeredUsers.some(u => u.username === player.username);
+      const isRegistered = registeredUsers.some(u => u.username.toLowerCase() === player.username.toLowerCase());
       let teamSlot;
       
       if (gameType === 'chkan') {
