@@ -1,3 +1,4 @@
+// client/src/components/GameCard.jsx
 import React from 'react';
 
 const GameCard = ({ game }) => {
@@ -56,6 +57,37 @@ const GameCard = ({ game }) => {
     }
   };
 
+  // New helper function to check if a player is authenticated (registered user)
+  const isAuthenticatedPlayer = (playerName, gameData) => {
+    if (!gameData || !playerName) return false;
+    
+    // If game_data has an authenticatedPlayers array, check that directly
+    if (gameData.authenticatedPlayers && Array.isArray(gameData.authenticatedPlayers)) {
+      return gameData.authenticatedPlayers.includes(playerName);
+    }
+    
+    // For backward compatibility, check if player data has isAuthenticated flag
+    if (gameData.players) {
+      const player = gameData.players.find(p => p.name === playerName);
+      if (player && player.isAuthenticated) return true;
+    }
+    
+    if (gameData.teams) {
+      for (const team of gameData.teams) {
+        if (team.authenticatedPlayers && team.authenticatedPlayers.includes(playerName)) {
+          return true;
+        }
+      }
+    }
+    
+    // Fall back to checking if the player was specified in the initial invitation
+    if (game.created_by_user_id && playerName === game.created_by_username) {
+      return true;
+    }
+    
+    return false;
+  };
+
   if (game.type === 'chkan') {
     // Parse player scores
     const playerScores = game.player_scores ? game.player_scores.split(', ') : [];
@@ -66,6 +98,14 @@ const GameCard = ({ game }) => {
         score: parseInt(parts[1]) || 0
       };
     });
+    
+    // Parse game data to check for authenticated players
+    let gameData = null;
+    try {
+      gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+    } catch (e) {
+      console.error('Error parsing game data:', e);
+    }
     
     // Sort players by score (lowest first)
     players.sort((a, b) => a.score - b.score);
@@ -102,6 +142,8 @@ const GameCard = ({ game }) => {
             {players.map((player, index) => {
               const isWinner = hasWinners ? player.score < 701 : index === 0;
               const isLoser = hasWinners && player.score >= 701;
+              const isAuthenticated = isAuthenticatedPlayer(player.name, gameData);
+              
               return (
                 <div key={index} className="col-6">
                   <div className={`text-center p-2 rounded ${
@@ -109,12 +151,19 @@ const GameCard = ({ game }) => {
                     isLoser ? 'bg-danger bg-opacity-10 border-danger' : 
                     'bg-light'
                   }`}>
-                    <div className="fw-bold small text-muted">
+                    <div className="fw-bold small text-muted d-flex align-items-center justify-content-center">
                       {isWinner && hasWinners ? 'WINNER' : 
                        isLoser ? 'LOSER' : 
                        `PLAYER ${index + 1}`}
                     </div>
-                    <div className="fw-semibold small">{player.name}</div>
+                    <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                      {player.name}
+                      {isAuthenticated && (
+                        <i className="bi bi-check-circle-fill text-success" 
+                           title="Authenticated user" 
+                           style={{ fontSize: '0.8rem' }}></i>
+                      )}
+                    </div>
                     <div className={`h6 mb-0 ${
                       isWinner ? 'text-success' : 
                       isLoser ? 'text-danger' : 
@@ -134,33 +183,35 @@ const GameCard = ({ game }) => {
     // S7ab game - display team players if available
     const duration = calculateDuration();
     
-    // Try to get team player information from game_data
+    // Parse game data
+    let gameData = null;
+    try {
+      gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+    } catch (e) {
+      console.error('Error parsing game data:', e);
+    }
+    
+    // Get team player information
     let team1Players = null;
     let team2Players = null;
     let team1Name = game.team1;
     let team2Name = game.team2;
     
-    if (game.game_data) {
-      try {
-        const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
-        
-        // Check for team players in different possible locations
-        if (gameData.team1Players && gameData.team2Players) {
-          team1Players = gameData.team1Players;
-          team2Players = gameData.team2Players;
-        } else if (gameData.teams && gameData.teams.length >= 2) {
-          team1Players = gameData.teams[0].players;
-          team2Players = gameData.teams[1].players;
-          // Also get team names from teams array if available
-          team1Name = gameData.teams[0].name || game.team1;
-          team2Name = gameData.teams[1].name || game.team2;
-        }
-      } catch (error) {
-        console.error('Error parsing game_data:', error);
+    if (gameData) {
+      // Check for team players in different possible locations
+      if (gameData.team1Players && gameData.team2Players) {
+        team1Players = gameData.team1Players;
+        team2Players = gameData.team2Players;
+      } else if (gameData.teams && gameData.teams.length >= 2) {
+        team1Players = gameData.teams[0].players;
+        team2Players = gameData.teams[1].players;
+        // Also get team names from teams array if available
+        team1Name = gameData.teams[0].name || game.team1;
+        team2Name = gameData.teams[1].name || game.team2;
       }
     }
     
-    // Function to render team info
+    // Function to render team info with authenticated player indicators
     const renderTeamInfo = (teamName, players, score, isWinner, isLoser) => (
       <div className={`text-center p-2 rounded ${
         isWinner ? 'bg-success bg-opacity-10 border-success' : 
@@ -174,7 +225,17 @@ const GameCard = ({ game }) => {
         </div>
         {players && players.length > 0 ? (
           <div className="fw-semibold small">
-            {players.join(' & ')}
+            {players.map((playerName, idx) => (
+              <div key={idx} className="d-flex align-items-center justify-content-center gap-1">
+                {playerName}
+                {isAuthenticatedPlayer(playerName, gameData) && (
+                  <i className="bi bi-check-circle-fill text-success" 
+                     title="Authenticated user" 
+                     style={{ fontSize: '0.8rem' }}></i>
+                )}
+                {idx < players.length - 1 && <span className="mx-1">&</span>}
+              </div>
+            ))}
           </div>
         ) : (
           <div className="fw-semibold small">{teamName}</div>

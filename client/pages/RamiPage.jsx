@@ -1,5 +1,4 @@
-// client/pages/RamiPage.jsx - Complete updated version with username validation
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useReducer } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../src/hooks/useAuth';
 import useSocket from '../src/hooks/useSocket';
@@ -19,90 +18,227 @@ import {
 } from '../src/components/GameSetup';
 import { gameAPI, handleApiError } from '../src/utils/api';
 
+// Game state reducer
+const gameStateReducer = (state, action) => {
+  switch (action.type) {
+    case 'RESET_GAME':
+      return {
+        gameState: null,
+        gameType: '',
+        gameCreatedAt: null,
+        showForm: false,
+        roundScores: {},
+        showRoundDetails: false,
+        currentGameId: null,
+        playerAcceptanceStatus: {},
+        allInvitationsAccepted: false,
+      };
+    case 'SET_GAME_TYPE':
+      return { ...state, gameType: action.payload };
+    case 'SET_GAME_STATE':
+      return { ...state, gameState: action.payload };
+    case 'SET_GAME_CREATED_AT':
+      return { ...state, gameCreatedAt: action.payload };
+    case 'SET_SHOW_FORM':
+      return { ...state, showForm: action.payload };
+    case 'SET_ROUND_SCORES':
+      return { ...state, roundScores: action.payload };
+    case 'SET_SHOW_ROUND_DETAILS':
+      return { ...state, showRoundDetails: action.payload };
+    case 'SET_CURRENT_GAME_ID':
+      return { ...state, currentGameId: action.payload };
+    case 'SET_PLAYER_ACCEPTANCE_STATUS':
+      return { ...state, playerAcceptanceStatus: { ...state.playerAcceptanceStatus, ...action.payload } };
+    case 'SET_ALL_INVITATIONS_ACCEPTED':
+      return { ...state, allInvitationsAccepted: action.payload };
+    case 'INIT_ROUND_SCORES':
+      const newRoundScores = {};
+      if (state.gameType === 'chkan') {
+        action.payload.players.forEach((_, index) => {
+          newRoundScores[`player-${index}`] = '';
+        });
+      } else {
+        newRoundScores['team-0'] = '';
+        newRoundScores['team-1'] = '';
+      }
+      return { ...state, roundScores: newRoundScores };
+    case 'LOAD_ACTIVE_GAME':
+      return {
+        ...state,
+        gameState: action.payload.gameState,
+        gameType: action.payload.gameType,
+        gameCreatedAt: action.payload.createdAt,
+        showForm: true,
+      };
+    default:
+      return state;
+  }
+};
+
+// Players state reducer
+const playersReducer = (state, action) => {
+  switch (action.type) {
+    case 'INIT_CHKAN_PLAYERS':
+      const players = {};
+      const customInputs = {};
+      for (let i = 0; i < action.payload; i++) {
+        players[i] = '';
+        customInputs[i] = false;
+      }
+      return {
+        ...state,
+        chkanPlayers: players,
+        chkanCustomInputs: customInputs,
+      };
+    case 'SET_CHKAN_PLAYER':
+      return {
+        ...state,
+        chkanPlayers: {
+          ...state.chkanPlayers,
+          [action.payload.index]: action.payload.value
+        }
+      };
+    case 'TOGGLE_CHKAN_CUSTOM_INPUT':
+      const newCustomInputs = {
+        ...state.chkanCustomInputs,
+        [action.payload]: !state.chkanCustomInputs[action.payload]
+      };
+      // Clear player name if we're toggling from custom to dropdown
+      const updatedPlayers = { ...state.chkanPlayers };
+      if (!state.chkanCustomInputs[action.payload]) {
+        updatedPlayers[action.payload] = '';
+      }
+      return {
+        ...state,
+        chkanPlayers: updatedPlayers,
+        chkanCustomInputs: newCustomInputs
+      };
+    case 'SET_TEAM_PLAYER':
+      return {
+        ...state,
+        teamPlayers: {
+          ...state.teamPlayers,
+          [action.payload.team]: {
+            ...state.teamPlayers[action.payload.team],
+            [action.payload.playerSlot]: action.payload.value
+          }
+        }
+      };
+    case 'TOGGLE_TEAM_CUSTOM_INPUT':
+      const newTeamCustomInputs = {
+        ...state.customPlayerInputs,
+        [action.payload.team]: {
+          ...state.customPlayerInputs[action.payload.team],
+          [action.payload.playerSlot]: !state.customPlayerInputs[action.payload.team][action.payload.playerSlot]
+        }
+      };
+      // Clear player name if we're toggling from custom to dropdown
+      const updatedTeamPlayers = { ...state.teamPlayers };
+      if (!state.customPlayerInputs[action.payload.team][action.payload.playerSlot]) {
+        updatedTeamPlayers[action.payload.team][action.payload.playerSlot] = '';
+      }
+      return {
+        ...state,
+        teamPlayers: updatedTeamPlayers,
+        customPlayerInputs: newTeamCustomInputs
+      };
+    case 'RESET_PLAYERS':
+      return {
+        ...state,
+        teamPlayers: {
+          team1: { player1: '', player2: '' },
+          team2: { player1: '', player2: '' }
+        },
+        customPlayerInputs: {
+          team1: { player1: false, player2: false },
+          team2: { player1: false, player2: false }
+        },
+        chkanPlayers: {},
+        chkanCustomInputs: {}
+      };
+    default:
+      return state;
+  }
+};
+
 export default function RamiPage() {
   const [user] = useAuth();
   const socket = useSocket();
   
-  // Game state
-  const [gameState, setGameState] = useState(null);
-  const [gameCreatedAt, setGameCreatedAt] = useState(null);
-  const [gameTime, setGameTime] = useState(new Date()); 
-  const [gameType, setGameType] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [roundScores, setRoundScores] = useState({});
-  const [roundInputError, setRoundInputError] = useState(null);
-  const [showRoundDetails, setShowRoundDetails] = useState(false);
+  // Use reducers for complex state management
+  const [gameData, dispatchGame] = useReducer(gameStateReducer, {
+    gameState: null,
+    gameType: '',
+    gameCreatedAt: null,
+    showForm: false,
+    roundScores: {},
+    showRoundDetails: false,
+    currentGameId: null,
+    playerAcceptanceStatus: {},
+    allInvitationsAccepted: false,
+  });
+
+  const [playersData, dispatchPlayers] = useReducer(playersReducer, {
+    teamPlayers: {
+      team1: { player1: '', player2: '' },
+      team2: { player1: '', player2: '' }
+    },
+    customPlayerInputs: {
+      team1: { player1: false, player2: false },
+      team2: { player1: false, player2: false }
+    },
+    chkanPlayers: {},
+    chkanCustomInputs: {},
+  });
   
-  // UI state
+  // Simple states
+  const [gameTime, setGameTime] = useState(new Date());
+  const [numberOfPlayers, setNumberOfPlayers] = useState(3);
+  const [registeredUsers, setRegisteredUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingActiveGame, setLoadingActiveGame] = useState(true);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(null);
-  
-  // Player selection state
-  const [numberOfPlayers, setNumberOfPlayers] = useState(3);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
-  const [teamPlayers, setTeamPlayers] = useState({
-    team1: { player1: '', player2: '' },
-    team2: { player1: '', player2: '' }
-  });
-  const [customPlayerInputs, setCustomPlayerInputs] = useState({
-    team1: { player1: false, player2: false },
-    team2: { player1: false, player2: false }
-  });
-  const [chkanPlayers, setChkanPlayers] = useState({});
-  const [chkanCustomInputs, setChkanCustomInputs] = useState({});
-  
-  // Invitation system state
-  const [playerAcceptanceStatus, setPlayerAcceptanceStatus] = useState({});
-  const [currentGameId, setCurrentGameId] = useState(null);
-  const [allInvitationsAccepted, setAllInvitationsAccepted] = useState(false);
-  
-  // History state
+  const [roundInputError, setRoundInputError] = useState(null);
   const [scores, setScores] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const scoresPerPage = 5;
 
-  // Socket event handlers - Only for invitation responses (not receiving invitations)
+  // Socket event handlers for invitations
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('invitation_response', (data) => {
-      const { gameId, playerName, teamSlot, response } = data;
-      
-      if (gameId === currentGameId) {
-        setPlayerAcceptanceStatus(prev => ({
-          ...prev,
-          [teamSlot]: response === 'accepted'
-        }));
-        
-        setStatus({
-          type: response === 'accepted' ? 'success' : 'info',
-          message: `${playerName} has ${response} the game invitation`
+    const handleInvitationResponse = (data) => {
+      if (data.gameId === gameData.currentGameId) {
+        dispatchGame({
+          type: 'SET_PLAYER_ACCEPTANCE_STATUS', 
+          payload: { [data.teamSlot]: data.response === 'accepted' }
         });
         
-        checkAllInvitationsAccepted(gameId);
+        setStatus({
+          type: data.response === 'accepted' ? 'success' : 'info',
+          message: `${data.playerName} has ${data.response} the game invitation`
+        });
+        
+        checkAllInvitationsAccepted(data.gameId);
       }
-    });
-
-    return () => {
-      socket.off('invitation_response');
     };
-  }, [socket, currentGameId]);
 
-  // Time tracking for active games
+    socket.on('invitation_response', handleInvitationResponse);
+    return () => socket.off('invitation_response', handleInvitationResponse);
+  }, [socket, gameData.currentGameId]);
+
+  // Game time tracker for active games
   useEffect(() => {
     let interval;
-    if (gameCreatedAt) {
-      interval = setInterval(() => {
-        setGameTime(new Date());
-      }, 1000);
+    if (gameData.gameCreatedAt) {
+      interval = setInterval(() => setGameTime(new Date()), 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [gameCreatedAt]);
+  }, [gameData.gameCreatedAt]);
 
   // Initial data loading
   useEffect(() => {
@@ -117,98 +253,10 @@ export default function RamiPage() {
 
   // Load more scores when page changes
   useEffect(() => {
-    if (page > 1) {
-      fetchScores();
-    }
+    if (page > 1) fetchScores();
   }, [page]);
 
-  // Helper functions
-  const initializeChkanPlayerStates = (numPlayers) => {
-    const players = {};
-    const customInputs = {};
-    
-    for (let i = 0; i < numPlayers; i++) {
-      players[i] = '';
-      customInputs[i] = false;
-    }
-    
-    setChkanPlayers(players);
-    setChkanCustomInputs(customInputs);
-  };
-
-  const initializeRoundScores = (state) => {
-    const newRoundScores = {};
-    if (state.type === 'chkan') {
-      state.players.forEach((_, index) => {
-        newRoundScores[`player-${index}`] = '';
-      });
-    } else {
-      newRoundScores['team-0'] = '';
-      newRoundScores['team-1'] = '';
-    }
-    setRoundScores(newRoundScores);
-  };
-
-  const resetGameState = () => {
-    setGameState(null);
-    setGameType('');
-    setGameCreatedAt(null);
-    setShowForm(false);
-    setRoundScores({});
-    setShowRoundDetails(false);
-    setCurrentGameId(null);
-    setPlayerAcceptanceStatus({});
-    setAllInvitationsAccepted(false);
-    
-    // Reset S7ab states
-    setTeamPlayers({
-      team1: { player1: '', player2: '' },
-      team2: { player1: '', player2: '' }
-    });
-    setCustomPlayerInputs({
-      team1: { player1: false, player2: false },
-      team2: { player1: false, player2: false }
-    });
-    
-    // Reset Chkan states
-    setChkanPlayers({});
-    setChkanCustomInputs({});
-  };
-
-  // Helper functions for username validation
-  const isDuplicateUsername = (username) => {
-    if (!username) return false;
-    
-    const normalizedUsername = username.toLowerCase().trim();
-    
-    if (gameType === 'chkan') {
-      const usedNames = Object.values(chkanPlayers)
-        .filter(name => name && name.trim() !== '')
-        .map(name => name.toLowerCase().trim());
-      
-      return usedNames.filter(name => name === normalizedUsername).length > 1;
-    } else {
-      const allNames = [
-        teamPlayers.team1.player1,
-        teamPlayers.team1.player2,
-        teamPlayers.team2.player1,
-        teamPlayers.team2.player2
-      ].filter(name => name && name.trim() !== '')
-        .map(name => name.toLowerCase().trim());
-      
-      return allNames.filter(name => name === normalizedUsername).length > 1;
-    }
-  };
-
-  // Check if a custom name conflicts with registered users
-  const isRegisteredUsername = (username) => {
-    if (!username) return false;
-    
-    const normalizedUsername = username.toLowerCase().trim();
-    return registeredUsers.some(user => user.username.toLowerCase() === normalizedUsername);
-  };
-
-  // API calls
+  // API Functions
   const fetchRegisteredUsers = async () => {
     try {
       const response = await fetch('http://192.168.0.12:5000/api/users', {
@@ -233,10 +281,10 @@ export default function RamiPage() {
       }
       
       setScores(prev => page === 1 ? data : [...prev, ...data]);
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching scores:', err);
       setError('Failed to load recent games. Please try again later.');
+    } finally {
       setLoading(false);
     }
   };
@@ -247,10 +295,11 @@ export default function RamiPage() {
       const data = await gameAPI.getActiveGame();
       
       if (data.hasActiveGame) {
-        setGameState(data.gameState);
-        setGameType(data.gameType);
-        setGameCreatedAt(data.createdAt);
-        setShowForm(true);
+        dispatchGame({
+          type: 'LOAD_ACTIVE_GAME',
+          payload: data
+        });
+        // Initialize round scores
         initializeRoundScores(data.gameState);
       }
     } catch (err) {
@@ -269,7 +318,7 @@ export default function RamiPage() {
       if (response.ok) {
         const invitations = await response.json();
         const allAccepted = invitations.every(inv => inv.status === 'accepted');
-        setAllInvitationsAccepted(allAccepted);
+        dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: allAccepted });
       }
     } catch (error) {
       console.error('Error checking invitation status:', error);
@@ -280,136 +329,15 @@ export default function RamiPage() {
     if (!user) return;
     
     try {
-      await gameAPI.saveActiveGame(state, gameType);
+      await gameAPI.saveActiveGame(state, gameData.gameType);
     } catch (err) {
       console.error('Error saving game state:', err);
     }
   };
 
-  // Event handlers
-  const handleSelectGameType = (type) => {
-    setGameType(type);
-    if (type === 'chkan') {
-      initializeChkanPlayerStates(numberOfPlayers);
-    }
-  };
-
-  const handlePlayerSelection = (team, playerSlot, value) => {
-    setTeamPlayers(prev => ({
-      ...prev,
-      [team]: {
-        ...prev[team],
-        [playerSlot]: value
-      }
-    }));
-  };
-
-  const handleToggleCustomInput = (team, playerSlot) => {
-    setCustomPlayerInputs(prev => ({
-      ...prev,
-      [team]: {
-        ...prev[team],
-        [playerSlot]: !prev[team][playerSlot]
-      }
-    }));
-    
-    if (!customPlayerInputs[team][playerSlot]) {
-      setTeamPlayers(prev => ({
-        ...prev,
-        [team]: {
-          ...prev[team],
-          [playerSlot]: ''
-        }
-      }));
-    }
-  };
-
-  const handleChkanPlayerSelection = (playerIndex, value) => {
-    setChkanPlayers(prev => ({
-      ...prev,
-      [playerIndex]: value
-    }));
-  };
-
-  const handleToggleChkanCustomInput = (playerIndex) => {
-    setChkanCustomInputs(prev => ({
-      ...prev,
-      [playerIndex]: !prev[playerIndex]
-    }));
-    
-    if (!chkanCustomInputs[playerIndex]) {
-      setChkanPlayers(prev => ({
-        ...prev,
-        [playerIndex]: ''
-      }));
-    }
-  };
-
-  const handleSendInvitations = async () => {
-    setRoundInputError(null);
-    
-    let selectedPlayers;
-    
-    if (gameType === 'chkan') {
-      // Get all selected players
-      selectedPlayers = Object.values(chkanPlayers)
-        .filter(p => p.trim() !== '')
-        .map(username => ({ username }));
-      
-      if (selectedPlayers.length !== numberOfPlayers) {
-        setRoundInputError(`Veuillez sélectionner tous les ${numberOfPlayers} joueurs`);
-        return;
-      }
-      
-      // Check for duplicates
-      const uniqueNames = new Set(selectedPlayers.map(p => p.username.toLowerCase()));
-      if (uniqueNames.size !== selectedPlayers.length) {
-        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
-        return;
-      }
-    } else {
-      const team1Players = [teamPlayers.team1.player1, teamPlayers.team1.player2].filter(p => p);
-      const team2Players = [teamPlayers.team2.player1, teamPlayers.team2.player2].filter(p => p);
-      
-      if (team1Players.length === 0 || team2Players.length === 0) {
-        setRoundInputError('Veuillez sélectionner au moins un joueur pour chaque équipe');
-        return;
-      }
-      
-      // Combine all players and check for duplicates
-      const allPlayers = [...team1Players, ...team2Players];
-      selectedPlayers = allPlayers.map(username => ({ username }));
-      
-      const uniqueNames = new Set(allPlayers.map(name => name.toLowerCase()));
-      if (uniqueNames.size !== allPlayers.length) {
-        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
-        return;
-      }
-    }
-    
-    // Additional validation: Make sure manually entered names don't conflict with registered users
-    const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
-    const customNames = selectedPlayers
-      .filter(p => !registeredUsernames.includes(p.username.toLowerCase()))
-      .map(p => p.username.toLowerCase());
-    
-    const hasConflict = customNames.some(name => registeredUsernames.includes(name));
-    
-    if (hasConflict) {
-      setRoundInputError(`Un nom saisi manuellement est identique à un nom d'utilisateur déjà enregistré`);
-      return;
-    }
-    
-    // Send invitations to registered players
-    const gameId = await sendGameInvitations(gameType, selectedPlayers);
-    if (!gameId) return;
-    
-    setShowForm(true);
-  };
-
   const sendGameInvitations = async (gameType, selectedPlayers) => {
     const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setCurrentGameId(gameId);
+    dispatchGame({ type: 'SET_CURRENT_GAME_ID', payload: gameId });
     
     // Determine which players are registered
     const playersWithRegistrationStatus = selectedPlayers.map((player, index) => {
@@ -457,7 +385,7 @@ export default function RamiPage() {
           }
         });
         
-        setPlayerAcceptanceStatus(initialStatus);
+        dispatchGame({ type: 'SET_PLAYER_ACCEPTANCE_STATUS', payload: initialStatus });
         
         if (data.invitationsSent > 0) {
           setStatus({
@@ -466,7 +394,7 @@ export default function RamiPage() {
           });
         } else {
           // No invitations needed, can start immediately
-          setAllInvitationsAccepted(true);
+          dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: true });
         }
         
         return gameId;
@@ -482,27 +410,161 @@ export default function RamiPage() {
     return null;
   };
 
+  // Helper functions
+  const initializeRoundScores = useCallback((state) => {
+    dispatchGame({ type: 'INIT_ROUND_SCORES', payload: state });
+  }, []);
+
+  const isDuplicateUsername = (username) => {
+    if (!username) return false;
+    
+    const normalizedUsername = username.toLowerCase().trim();
+    
+    if (gameData.gameType === 'chkan') {
+      const usedNames = Object.values(playersData.chkanPlayers)
+        .filter(name => name && name.trim() !== '')
+        .map(name => name.toLowerCase().trim());
+      
+      return usedNames.filter(name => name === normalizedUsername).length > 1;
+    } else {
+      const allNames = [
+        playersData.teamPlayers.team1.player1,
+        playersData.teamPlayers.team1.player2,
+        playersData.teamPlayers.team2.player1,
+        playersData.teamPlayers.team2.player2
+      ].filter(name => name && name.trim() !== '')
+        .map(name => name.toLowerCase().trim());
+      
+      return allNames.filter(name => name === normalizedUsername).length > 1;
+    }
+  };
+
+  const isRegisteredUsername = (username) => {
+    if (!username) return false;
+    
+    const normalizedUsername = username.toLowerCase().trim();
+    return registeredUsers.some(user => user.username.toLowerCase() === normalizedUsername);
+  };
+
+  // Event handlers
+  const handleSelectGameType = (type) => {
+    dispatchGame({ type: 'SET_GAME_TYPE', payload: type });
+    if (type === 'chkan') {
+      dispatchPlayers({ type: 'INIT_CHKAN_PLAYERS', payload: numberOfPlayers });
+    }
+  };
+
+  const handlePlayerSelection = (team, playerSlot, value) => {
+    dispatchPlayers({
+      type: 'SET_TEAM_PLAYER', 
+      payload: { team, playerSlot, value }
+    });
+  };
+
+  const handleToggleCustomInput = (team, playerSlot) => {
+    dispatchPlayers({
+      type: 'TOGGLE_TEAM_CUSTOM_INPUT',
+      payload: { team, playerSlot }
+    });
+  };
+
+  const handleChkanPlayerSelection = (playerIndex, value) => {
+    dispatchPlayers({
+      type: 'SET_CHKAN_PLAYER',
+      payload: { index: playerIndex, value }
+    });
+  };
+
+  const handleToggleChkanCustomInput = (playerIndex) => {
+    dispatchPlayers({
+      type: 'TOGGLE_CHKAN_CUSTOM_INPUT',
+      payload: playerIndex
+    });
+  };
+
+  const handleSendInvitations = async () => {
+    setRoundInputError(null);
+    
+    let selectedPlayers;
+    
+    if (gameData.gameType === 'chkan') {
+      // Get all selected players
+      selectedPlayers = Object.values(playersData.chkanPlayers)
+        .filter(p => p.trim() !== '')
+        .map(username => ({ username }));
+      
+      if (selectedPlayers.length !== numberOfPlayers) {
+        setRoundInputError(`Veuillez sélectionner tous les ${numberOfPlayers} joueurs`);
+        return;
+      }
+      
+      // Check for duplicates
+      const uniqueNames = new Set(selectedPlayers.map(p => p.username.toLowerCase()));
+      if (uniqueNames.size !== selectedPlayers.length) {
+        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
+        return;
+      }
+    } else {
+      const team1Players = [playersData.teamPlayers.team1.player1, playersData.teamPlayers.team1.player2].filter(p => p);
+      const team2Players = [playersData.teamPlayers.team2.player1, playersData.teamPlayers.team2.player2].filter(p => p);
+      
+      if (team1Players.length === 0 || team2Players.length === 0) {
+        setRoundInputError('Veuillez sélectionner au moins un joueur pour chaque équipe');
+        return;
+      }
+      
+      // Combine all players and check for duplicates
+      const allPlayers = [...team1Players, ...team2Players];
+      selectedPlayers = allPlayers.map(username => ({ username }));
+      
+      const uniqueNames = new Set(allPlayers.map(name => name.toLowerCase()));
+      if (uniqueNames.size !== allPlayers.length) {
+        setRoundInputError(`Chaque joueur doit avoir un nom unique`);
+        return;
+      }
+    }
+    
+    // Check manual names vs registered users
+    const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
+    const customNames = selectedPlayers
+      .filter(p => !registeredUsernames.includes(p.username.toLowerCase()))
+      .map(p => p.username.toLowerCase());
+    
+    const hasConflict = customNames.some(name => registeredUsernames.includes(name));
+    
+    if (hasConflict) {
+      setRoundInputError(`Un nom saisi manuellement est identique à un nom d'utilisateur déjà enregistré`);
+      return;
+    }
+    
+    // Send invitations
+    const gameId = await sendGameInvitations(gameData.gameType, selectedPlayers);
+    if (!gameId) return;
+    
+    dispatchGame({ type: 'SET_SHOW_FORM', payload: true });
+  };
+
   const handleStartGameAfterAcceptance = () => {
     let initialState;
     
-    if (gameType === 'chkan') {
-      const selectedPlayers = Object.values(chkanPlayers).filter(p => p.trim() !== '');
+    if (gameData.gameType === 'chkan') {
+      const selectedPlayers = Object.values(playersData.chkanPlayers).filter(p => p.trim() !== '');
       const players = selectedPlayers.map((playerName, index) => ({
         name: playerName,
         scores: []
       }));
       
       initialState = {
-        type: gameType,
+        type: gameData.gameType,
         players,
         currentRound: 1
       };
     } else {
-      const team1Players = [teamPlayers.team1.player1, teamPlayers.team1.player2].filter(p => p);
-      const team2Players = [teamPlayers.team2.player1, teamPlayers.team2.player2].filter(p => p);
+      const team1Players = [playersData.teamPlayers.team1.player1, playersData.teamPlayers.team1.player2].filter(p => p);
+      const team2Players = [playersData.teamPlayers.team2.player1, playersData.teamPlayers.team2.player2].filter(p => p);
       
       initialState = {
-        type: gameType,
+        type: gameData.gameType,
         teams: [
           { 
             name: `Équipe 1`, 
@@ -519,28 +581,31 @@ export default function RamiPage() {
       };
     }
     
-    setGameState(initialState);
-    setGameCreatedAt(new Date().toISOString());
+    dispatchGame({ type: 'SET_GAME_STATE', payload: initialState });
+    dispatchGame({ type: 'SET_GAME_CREATED_AT', payload: new Date().toISOString() });
     initializeRoundScores(initialState);
-    setAllInvitationsAccepted(false);
+    dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: false });
   };
 
   const handlePlayerNameChange = (index, newName) => {
-    const updatedState = { ...gameState };
+    const updatedState = { ...gameData.gameState };
     updatedState.players[index].name = newName;
-    setGameState(updatedState);
+    dispatchGame({ type: 'SET_GAME_STATE', payload: updatedState });
     saveGameState(updatedState);
   };
 
   const handleTeamNameChange = (index, newName) => {
-    const updatedState = { ...gameState };
+    const updatedState = { ...gameData.gameState };
     updatedState.teams[index].name = newName;
-    setGameState(updatedState);
+    dispatchGame({ type: 'SET_GAME_STATE', payload: updatedState });
     saveGameState(updatedState);
   };
 
   const handleRoundScoreChange = (key, value) => {
-    setRoundScores({ ...roundScores, [key]: value });
+    dispatchGame({ 
+      type: 'SET_ROUND_SCORES', 
+      payload: { ...gameData.roundScores, [key]: value } 
+    });
     setRoundInputError(null);
   };
 
@@ -548,7 +613,7 @@ export default function RamiPage() {
     setRoundInputError(null);
     
     // Validate all scores are entered
-    const scores = Object.values(roundScores);
+    const scores = Object.values(gameData.roundScores);
     if (scores.some(score => score === '' || score === null)) {
       setRoundInputError('Please enter scores for all players/teams');
       return;
@@ -561,50 +626,54 @@ export default function RamiPage() {
       return;
     }
 
-    const updatedState = { ...gameState };
+    const updatedState = { ...gameData.gameState };
 
-    if (gameType === 'chkan') {
+    if (gameData.gameType === 'chkan') {
       updatedState.players.forEach((player, index) => {
         const scoreKey = `player-${index}`;
-        player.scores.push(parseInt(roundScores[scoreKey]));
+        player.scores.push(parseInt(gameData.roundScores[scoreKey]));
       });
     } else {
       updatedState.teams.forEach((team, index) => {
         const scoreKey = `team-${index}`;
-        team.scores.push(parseInt(roundScores[scoreKey]));
+        team.scores.push(parseInt(gameData.roundScores[scoreKey]));
       });
     }
 
     updatedState.currentRound += 1;
-    setGameState(updatedState);
+    dispatchGame({ type: 'SET_GAME_STATE', payload: updatedState });
     
     // Clear round scores
     const clearedScores = {};
-    Object.keys(roundScores).forEach(key => {
+    Object.keys(gameData.roundScores).forEach(key => {
       clearedScores[key] = '';
     });
-    setRoundScores(clearedScores);
+    dispatchGame({ type: 'SET_ROUND_SCORES', payload: clearedScores });
 
     // Save the game state
     await saveGameState(updatedState);
     
     // Auto-expand round details after first round
     if (updatedState.currentRound === 2) {
-      setShowRoundDetails(true);
+      dispatchGame({ type: 'SET_SHOW_ROUND_DETAILS', payload: true });
     }
   };
 
-  const handleFinishGame = async () => {
+    const handleFinishGame = async () => {
     try {
       setLoading(true);
       
       // Calculate final scores and determine winner(s)
-      let gameData;
+      let gameDataToSave;
       
-      if (gameType === 'chkan') {
-        const playersWithTotals = gameState.players.map(player => ({
+      // Get list of registered users for authentication tracking
+      const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
+      
+      if (gameData.gameType === 'chkan') {
+        const playersWithTotals = gameData.gameState.players.map(player => ({
           ...player,
-          totalScore: player.scores.reduce((sum, score) => sum + score, 0)
+          totalScore: player.scores.reduce((sum, score) => sum + score, 0),
+          isAuthenticated: registeredUsernames.includes(player.name.toLowerCase())
         }));
         
         // Sort by total score for winners determination
@@ -612,53 +681,75 @@ export default function RamiPage() {
         const winners = sortedPlayers.filter(p => p.totalScore < 701);
         const losers = sortedPlayers.filter(p => p.totalScore >= 701);
         
-        gameData = {
+        // Create a list of authenticated players
+        const authenticatedPlayers = playersWithTotals
+          .filter(p => p.isAuthenticated)
+          .map(p => p.name);
+        
+        gameDataToSave = {
           type: 'chkan',
           winners: winners.map(p => p.name).join(', ') || 'None',
           losers: losers.map(p => p.name).join(', ') || 'None',
           player_scores: playersWithTotals.map(p => `${p.name}: ${p.totalScore}`).join(', '),
-          created_at: gameCreatedAt,
+          created_at: gameData.gameCreatedAt,
+          created_by_user_id: user.id,
+          created_by_username: user.username,
           game_data: {
-            ...gameState,
+            ...gameData.gameState,
             players: playersWithTotals,
             winners: winners.map(p => p.name),
-            losers: losers.map(p => p.name)
+            losers: losers.map(p => p.name),
+            authenticatedPlayers
           }
         };
       } else {
         // S7ab game with individual player tracking
-        const teamsWithTotals = gameState.teams.map(team => ({
-          ...team,
-          totalScore: team.scores.reduce((sum, score) => sum + score, 0)
-        }));
+        const teamsWithTotals = gameData.gameState.teams.map(team => {
+          // Track authenticated players within each team
+          const authenticatedPlayers = team.players
+            .filter(playerName => registeredUsernames.includes(playerName.toLowerCase()));
+          
+          return {
+            ...team,
+            totalScore: team.scores.reduce((sum, score) => sum + score, 0),
+            authenticatedPlayers
+          };
+        });
         
         const sortedTeams = [...teamsWithTotals].sort((a, b) => a.totalScore - b.totalScore);
         
-        gameData = {
+        // Create a list of all authenticated players
+        const authenticatedPlayers = teamsWithTotals.flatMap(t => t.authenticatedPlayers);
+        
+        gameDataToSave = {
           type: 's7ab',
           team1: teamsWithTotals[0].name,
           team2: teamsWithTotals[1].name,
           score1: teamsWithTotals[0].totalScore,
           score2: teamsWithTotals[1].totalScore,
-          created_at: gameCreatedAt,
+          created_at: gameData.gameCreatedAt,
+          created_by_user_id: user.id,
+          created_by_username: user.username,
           game_data: {
-            ...gameState,
+            ...gameData.gameState,
             teams: teamsWithTotals,
             winner: sortedTeams[0].name,
-            // Store individual players for each team
             team1Players: teamsWithTotals[0].players,
-            team2Players: teamsWithTotals[1].players
+            team2Players: teamsWithTotals[1].players,
+            authenticatedPlayers
           }
         };
       }
 
-      await gameAPI.saveGame(gameData);
+      // Save the game with authentication info
+      await gameAPI.saveGame(gameDataToSave);
       await gameAPI.deleteActiveGame();
       
       setStatus({ type: 'success', message: 'Game completed successfully!' });
       
       // Reset game state
-      resetGameState();
+      dispatchGame({ type: 'RESET_GAME' });
+      dispatchPlayers({ type: 'RESET_PLAYERS' });
       
       // Refresh scores list
       setPage(1);
@@ -678,7 +769,8 @@ export default function RamiPage() {
   const handleCancelGame = async () => {
     try {
       await gameAPI.deleteActiveGame();
-      resetGameState();
+      dispatchGame({ type: 'RESET_GAME' });
+      dispatchPlayers({ type: 'RESET_PLAYERS' });
       setStatus({ type: 'info', message: 'Game cancelled.' });
       setTimeout(() => setStatus(null), 3000);
     } catch (err) {
@@ -687,11 +779,14 @@ export default function RamiPage() {
   };
 
   const handleToggleRoundDetails = () => {
-    setShowRoundDetails(!showRoundDetails);
+    dispatchGame({ 
+      type: 'SET_SHOW_ROUND_DETAILS', 
+      payload: !gameData.showRoundDetails 
+    });
   };
 
   const handleGoBack = () => {
-    setGameType('');
+    dispatchGame({ type: 'SET_GAME_TYPE', payload: '' });
     setRoundInputError(null);
   };
 
@@ -699,19 +794,19 @@ export default function RamiPage() {
     setPage(prev => prev + 1);
   };
 
-  // Determine which component to render for game setup
+  // Render game setup component based on current state
   const renderGameSetup = () => {
     // If we have a game state, show the active game component
-    if (gameState) {
+    if (gameData.gameState) {
       return (
         <ActiveGame
-          gameType={gameType}
-          gameState={gameState}
-          roundScores={roundScores}
+          gameType={gameData.gameType}
+          gameState={gameData.gameState}
+          roundScores={gameData.roundScores}
           roundInputError={roundInputError}
-          showRoundDetails={showRoundDetails}
+          showRoundDetails={gameData.showRoundDetails}
           loading={loading}
-          gameCreatedAt={gameCreatedAt}
+          gameCreatedAt={gameData.gameCreatedAt}
           gameTime={gameTime}
           onRoundScoreChange={handleRoundScoreChange}
           onPlayerNameChange={handlePlayerNameChange}
@@ -725,14 +820,14 @@ export default function RamiPage() {
     }
 
     // If waiting for invitations
-    if (currentGameId && Object.keys(playerAcceptanceStatus).length > 0) {
+    if (gameData.currentGameId && Object.keys(gameData.playerAcceptanceStatus).length > 0) {
       return (
         <InvitationWaiting
-          gameType={gameType}
-          playerAcceptanceStatus={playerAcceptanceStatus}
-          chkanPlayers={chkanPlayers}
-          teamPlayers={teamPlayers}
-          allInvitationsAccepted={allInvitationsAccepted}
+          gameType={gameData.gameType}
+          playerAcceptanceStatus={gameData.playerAcceptanceStatus}
+          chkanPlayers={playersData.chkanPlayers}
+          teamPlayers={playersData.teamPlayers}
+          allInvitationsAccepted={gameData.allInvitationsAccepted}
           onStartGame={handleStartGameAfterAcceptance}
           onCancel={handleCancelGame}
         />
@@ -740,21 +835,21 @@ export default function RamiPage() {
     }
 
     // If game type is selected but no game state yet
-    if (gameType) {
+    if (gameData.gameType) {
       return (
         <PlayerSelector
-          gameType={gameType}
+          gameType={gameData.gameType}
           numberOfPlayers={numberOfPlayers}
           registeredUsers={registeredUsers}
-          teamPlayers={teamPlayers}
-          setTeamPlayers={setTeamPlayers}
-          customPlayerInputs={customPlayerInputs}
-          setCustomPlayerInputs={setCustomPlayerInputs}
-          chkanPlayers={chkanPlayers}
-          setChkanPlayers={setChkanPlayers}
-          chkanCustomInputs={chkanCustomInputs}
-          setChkanCustomInputs={setChkanCustomInputs}
-          playerAcceptanceStatus={playerAcceptanceStatus}
+          teamPlayers={playersData.teamPlayers}
+          setTeamPlayers={handlePlayerSelection}
+          customPlayerInputs={playersData.customPlayerInputs}
+          setCustomPlayerInputs={handleToggleCustomInput}
+          chkanPlayers={playersData.chkanPlayers}
+          setChkanPlayers={handleChkanPlayerSelection}
+          chkanCustomInputs={playersData.chkanCustomInputs}
+          setChkanCustomInputs={handleToggleChkanCustomInput}
+          playerAcceptanceStatus={gameData.playerAcceptanceStatus}
           onPlayerSelection={handlePlayerSelection}
           onToggleCustomInput={handleToggleCustomInput}
           onChkanPlayerSelection={handleChkanPlayerSelection}
@@ -800,7 +895,7 @@ export default function RamiPage() {
               <div>
                 {loadingActiveGame ? (
                   <LoadingSpinner text="Vérification de la partie sauvegardée..." className="py-5" />
-                ) : !showForm ? (
+                ) : !gameData.showForm ? (
                   <EmptyState
                     icon="bi-controller"
                     title="Prêt à commencer une nouvelle partie de Rami ?"
@@ -808,7 +903,7 @@ export default function RamiPage() {
                     action={
                       <button 
                         className="btn btn-primary btn-lg px-4"
-                        onClick={() => setShowForm(true)}
+                        onClick={() => dispatchGame({ type: 'SET_SHOW_FORM', payload: true })}
                       >
                         <i className="bi bi-plus-circle me-2"></i>
                         Démarrer le jeu
