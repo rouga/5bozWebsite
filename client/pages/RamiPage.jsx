@@ -675,77 +675,6 @@ export default function RamiPage() {
       // Get list of registered users for authentication tracking
       const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
       
-      // Create an array of dealer information for each round
-      const dealerInfo = [];
-      if (gameData.gameType === 'chkan') {
-        const numPlayers = gameData.gameState.players.length;
-        const initialDealerIndex = parseInt(gameData.gameState.initialDealer);
-        
-        // For each completed round, calculate who was the dealer
-        for (let i = 0; i < getCompletedRounds(); i++) {
-          const dealerIndex = (initialDealerIndex + i) % numPlayers;
-          dealerInfo.push({
-            round: i + 1,
-            dealerName: gameData.gameState.players[dealerIndex].name,
-            dealerIndex: dealerIndex
-          });
-        }
-      } else {
-        // For s7ab, create a dealer order array
-        const dealerOrder = [];
-        const teams = gameData.gameState.teams;
-        
-        // Build dealer order in the correct sequence
-        // Team 1 player 1
-        if (teams[0]?.players?.[0]) {
-          dealerOrder.push({
-            teamIndex: 0,
-            playerIndex: 0,
-            name: teams[0].players[0]
-          });
-        }
-        
-        // Team 2 player 1
-        if (teams[1]?.players?.[0]) {
-          dealerOrder.push({
-            teamIndex: 1,
-            playerIndex: 0,
-            name: teams[1].players[0]
-          });
-        }
-        
-        // Team 1 player 2
-        if (teams[0]?.players?.[1]) {
-          dealerOrder.push({
-            teamIndex: 0,
-            playerIndex: 1,
-            name: teams[0].players[1]
-          });
-        }
-        
-        // Team 2 player 2
-        if (teams[1]?.players?.[1]) {
-          dealerOrder.push({
-            teamIndex: 1,
-            playerIndex: 1,
-            name: teams[1].players[1]
-          });
-        }
-        
-        // For each completed round, calculate who was the dealer
-        const initialDealerIndex = parseInt(gameData.gameState.initialDealer);
-        for (let i = 0; i < getCompletedRounds(); i++) {
-          const dealerIndex = (initialDealerIndex + i) % dealerOrder.length;
-          const dealer = dealerOrder[dealerIndex];
-          dealerInfo.push({
-            round: i + 1,
-            dealerName: dealer.name,
-            teamIndex: dealer.teamIndex,
-            playerIndex: dealer.playerIndex
-          });
-        }
-      }
-      
       if (gameData.gameType === 'chkan') {
         const playersWithTotals = gameData.gameState.players.map(player => ({
           ...player,
@@ -769,16 +698,12 @@ export default function RamiPage() {
           losers: losers.map(p => p.name).join(', ') || 'None',
           player_scores: playersWithTotals.map(p => `${p.name}: ${p.totalScore}`).join(', '),
           created_at: gameData.gameCreatedAt,
-          created_by_user_id: user.id,
-          created_by_username: user.username,
           game_data: {
             ...gameData.gameState,
             players: playersWithTotals,
             winners: winners.map(p => p.name),
             losers: losers.map(p => p.name),
-            authenticatedPlayers,
-            dealerInfo, // Add dealer information
-            initialDealer: gameData.gameState.initialDealer
+            authenticatedPlayers
           }
         };
       } else {
@@ -786,7 +711,8 @@ export default function RamiPage() {
         const teamsWithTotals = gameData.gameState.teams.map(team => {
           // Track authenticated players within each team
           const authenticatedPlayers = team.players
-            .filter(playerName => registeredUsernames.includes(playerName.toLowerCase()));
+            ? team.players.filter(playerName => registeredUsernames.includes(playerName.toLowerCase()))
+            : [];
           
           return {
             ...team,
@@ -798,7 +724,7 @@ export default function RamiPage() {
         const sortedTeams = [...teamsWithTotals].sort((a, b) => a.totalScore - b.totalScore);
         
         // Create a list of all authenticated players
-        const authenticatedPlayers = teamsWithTotals.flatMap(t => t.authenticatedPlayers);
+        const authenticatedPlayers = teamsWithTotals.flatMap(t => t.authenticatedPlayers || []);
         
         gameDataToSave = {
           type: 's7ab',
@@ -807,17 +733,13 @@ export default function RamiPage() {
           score1: teamsWithTotals[0].totalScore,
           score2: teamsWithTotals[1].totalScore,
           created_at: gameData.gameCreatedAt,
-          created_by_user_id: user.id,
-          created_by_username: user.username,
           game_data: {
             ...gameData.gameState,
             teams: teamsWithTotals,
             winner: sortedTeams[0].name,
-            team1Players: teamsWithTotals[0].players,
-            team2Players: teamsWithTotals[1].players,
-            authenticatedPlayers,
-            dealerInfo, // Add dealer information
-            initialDealer: gameData.gameState.initialDealer
+            team1Players: teamsWithTotals[0].players || [],
+            team2Players: teamsWithTotals[1].players || [],
+            authenticatedPlayers
           }
         };
       }
