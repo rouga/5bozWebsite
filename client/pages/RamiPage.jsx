@@ -207,6 +207,7 @@ export default function RamiPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [initialDealer, setInitialDealer] = useState(null);
+  const [roundWinner, setRoundWinner] = useState('');
   const scoresPerPage = 5;
 
   // Socket event handlers for invitations
@@ -458,6 +459,10 @@ export default function RamiPage() {
     }
   };
 
+  const handleRoundWinnerChange = (winner) => {
+    setRoundWinner(winner);
+ };
+
   const handlePlayerSelection = (team, playerSlot, value) => {
     dispatchPlayers({
       type: 'SET_TEAM_PLAYER', 
@@ -548,6 +553,8 @@ export default function RamiPage() {
     dispatchGame({ type: 'SET_SHOW_FORM', payload: true });
   };
 
+  
+
   const handleStartGameAfterAcceptance = () => {
     let initialState;
     
@@ -633,6 +640,14 @@ export default function RamiPage() {
     }
 
     const updatedState = { ...gameData.gameState };
+    
+    // Initialize roundWinners array if it doesn't exist
+    if (!updatedState.roundWinners) {
+      updatedState.roundWinners = [];
+    }
+    
+    // Add the round winner to the array
+    updatedState.roundWinners.push(roundWinner || null);
 
     if (gameData.gameType === 'chkan') {
       updatedState.players.forEach((player, index) => {
@@ -655,6 +670,9 @@ export default function RamiPage() {
       clearedScores[key] = '';
     });
     dispatchGame({ type: 'SET_ROUND_SCORES', payload: clearedScores });
+    
+    // Clear round winner
+    setRoundWinner('');
 
     // Save the game state
     await saveGameState(updatedState);
@@ -664,6 +682,8 @@ export default function RamiPage() {
       dispatchGame({ type: 'SET_SHOW_ROUND_DETAILS', payload: true });
     }
   };
+
+  
 
   const handleFinishGame = async () => {
     try {
@@ -818,6 +838,8 @@ export default function RamiPage() {
           onToggleRoundDetails={handleToggleRoundDetails}
           onFinishGame={handleFinishGame}
           onCancelGame={handleCancelGame}
+          onRoundWinnerChange={handleRoundWinnerChange}
+          roundWinner={roundWinner}
         />
       );
     }

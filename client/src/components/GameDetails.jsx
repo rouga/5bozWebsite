@@ -8,7 +8,7 @@ const GameDetails = ({ game }) => {
   
   // Calculate the dealer for each round
   const calculateDealerForRound = (roundIndex) => {
-    if (!gameData.initialDealer) return null;
+    if (gameData.initialDealer === undefined) return null;
     
     const initialDealerIndex = parseInt(gameData.initialDealer);
     
@@ -19,7 +19,7 @@ const GameDetails = ({ game }) => {
       
       const numPlayers = players.length;
       const dealerIndex = (initialDealerIndex + roundIndex) % numPlayers;
-      return players[dealerIndex].name;
+      return players[dealerIndex]?.name;
     } else {
       // For s7ab games
       const teams = gameData.teams || [];
@@ -69,11 +69,17 @@ const GameDetails = ({ game }) => {
                 <th className="fw-semibold">Player</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
                   <th key={i} className="text-center fw-semibold">
-                    R{i + 1}
-                    {gameData.initialDealer && (
-                      <div className="small text-muted mt-1">
+                    <div>R{i + 1}</div>
+                    {gameData.initialDealer !== undefined && (
+                      <div className="small text-muted">
                         <i className="bi bi-shuffle me-1"></i>
-                        {calculateDealerForRound(i)}
+                        Jarray: {calculateDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameData.roundWinners && gameData.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                        Farchet {gameData.roundWinners[i]}
                       </div>
                     )}
                   </th>
@@ -87,7 +93,7 @@ const GameDetails = ({ game }) => {
                   <td className="fw-medium">{player.name}</td>
                   {Array.from({ length: maxRounds }, (_, roundIndex) => (
                     <td key={roundIndex} className="text-center">
-                      {player.scores[roundIndex] || '–'}
+                      {player.scores[roundIndex] !== undefined ? player.scores[roundIndex] : '–'}
                     </td>
                   ))}
                   <td className="text-center fw-bold bg-primary text-white">
@@ -115,11 +121,17 @@ const GameDetails = ({ game }) => {
                 <th className="fw-semibold">Team</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
                   <th key={i} className="text-center fw-semibold">
-                    R{i + 1}
-                    {gameData.initialDealer && (
-                      <div className="small text-muted mt-1">
+                    <div>R{i + 1}</div>
+                    {gameData.initialDealer !== undefined && (
+                      <div className="small text-muted">
                         <i className="bi bi-shuffle me-1"></i>
-                        {calculateDealerForRound(i)}
+                        Jarray: {calculateDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameData.roundWinners && gameData.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                        Farchet {gameData.roundWinners[i]}
                       </div>
                     )}
                   </th>
@@ -144,7 +156,7 @@ const GameDetails = ({ game }) => {
                     </td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
-                        {team.scores[roundIndex] || '–'}
+                        {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
                       </td>
                     ))}
                     <td className="text-center fw-bold bg-primary text-white">

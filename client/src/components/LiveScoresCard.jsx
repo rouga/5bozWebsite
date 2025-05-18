@@ -44,6 +44,16 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
       
       if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
       
+      // Helper function to get dealer name for a specific round
+      const getDealerForRound = (roundIndex) => {
+        if (gameData.initialDealer === undefined) return null;
+        
+        const initialDealerIndex = parseInt(gameData.initialDealer);
+        const numPlayers = players.length;
+        const dealerIndex = (initialDealerIndex + roundIndex) % numPlayers;
+        return players[dealerIndex]?.name;
+      };
+      
       return (
         <div className="table-responsive mt-3">
           <table className="table table-sm table-bordered">
@@ -51,7 +61,21 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
               <tr>
                 <th className="fw-semibold">Player</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    <div>R{i + 1}</div>
+                    {gameData.initialDealer !== undefined && (
+                      <div className="small text-muted">
+                        <i className="bi bi-shuffle me-1"></i>
+                        {getDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameData.roundWinners && gameData.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                        {gameData.roundWinners[i]}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
@@ -80,6 +104,47 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
       
       if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
       
+      // Helper function to get dealer name for a specific round
+      const getDealerForRound = (roundIndex) => {
+        if (gameData.initialDealer === undefined) return null;
+        
+        const initialDealerIndex = parseInt(gameData.initialDealer);
+        
+        // Create dealer order array
+        const dealerOrder = [];
+        
+        // Team 1 player 1
+        if (teams[0]?.players?.[0]) {
+          dealerOrder.push(teams[0].players[0]);
+        }
+        
+        // Team 2 player 1
+        if (teams[1]?.players?.[0]) {
+          dealerOrder.push(teams[1].players[0]);
+        }
+        
+        // Team 1 player 2
+        if (teams[0]?.players?.[1]) {
+          dealerOrder.push(teams[0].players[1]);
+        }
+        
+        // Team 2 player 2
+        if (teams[1]?.players?.[1]) {
+          dealerOrder.push(teams[1].players[1]);
+        }
+        
+        if (dealerOrder.length === 0) return null;
+        
+        const dealerIndex = (initialDealerIndex + roundIndex) % dealerOrder.length;
+        return dealerOrder[dealerIndex];
+      };
+      
+      // Format player names for team display
+      const formatTeamPlayerNames = (team) => {
+        if (!team.players || team.players.length === 0) return team.name;
+        return team.players.join(' & ');
+      };
+      
       return (
         <div className="table-responsive mt-3">
           <table className="table table-sm table-bordered">
@@ -87,25 +152,46 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
               <tr>
                 <th className="fw-semibold">Team</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    <div>R{i + 1}</div>
+                    {gameData.initialDealer !== undefined && (
+                      <div className="small text-muted">
+                        <i className="bi bi-shuffle me-1"></i>
+                        {getDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameData.roundWinners && gameData.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                        {gameData.roundWinners[i]}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
             </thead>
             <tbody>
-              {teams.map((team, index) => (
-                <tr key={index}>
-                  <td className="fw-medium">{team.name}</td>
-                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
-                    <td key={roundIndex} className="text-center">
-                      {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+              {teams.map((team, index) => {
+                const playerNames = formatTeamPlayerNames(team);
+                
+                return (
+                  <tr key={index}>
+                    <td className="fw-medium">
+                      <div>{playerNames}</div>
+                      <small className="text-muted">{team.name}</small>
                     </td>
-                  ))}
-                  <td className="text-center fw-bold bg-primary text-white">
-                    {team.scores.reduce((a, b) => a + b, 0)}
-                  </td>
-                </tr>
-              ))}
+                    {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                      <td key={roundIndex} className="text-center">
+                        {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+                      </td>
+                    ))}
+                    <td className="text-center fw-bold bg-primary text-white">
+                      {team.scores.reduce((a, b) => a + b, 0)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -161,7 +247,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </div>
             
             <div className="row g-2">
-              {sortedPlayers.slice(0, 4).map((player, playerIndex) => {
+              {sortedPlayers.map((player, playerIndex) => {
                 const totalScore = player.scores.reduce((sum, score) => sum + score, 0);
                 const isLeading = playerIndex === 0;
                 
@@ -233,6 +319,15 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
       const team2Score = teams[1].scores.reduce((sum, score) => sum + score, 0);
       const isTeam1Leading = team1Score < team2Score;
 
+      // Format player names
+      const formatTeamPlayers = (team) => {
+        if (!team.players || team.players.length === 0) return team.name;
+        return team.players.join(' & ');
+      };
+
+      const team1Players = formatTeamPlayers(teams[0]);
+      const team2Players = formatTeamPlayers(teams[1]);
+
       return (
         <div key={index} className="card border-0 shadow-sm mb-3">
           <div className="card-body p-3">
@@ -263,7 +358,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                   <div className="fw-bold small text-muted">
                     {isTeam1Leading ? '👑 LEADING' : 'TEAM 1'}
                   </div>
-                  <div className="fw-semibold small">{teams[0].name}</div>
+                  <div className="fw-semibold small">{team1Players}</div>
                   <div className={`h5 mb-0 ${isTeam1Leading ? 'text-success' : 'text-primary'}`}>
                     {team1Score}
                   </div>
@@ -277,7 +372,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                   <div className="fw-bold small text-muted">
                     {!isTeam1Leading ? '👑 LEADING' : 'TEAM 2'}
                   </div>
-                  <div className="fw-semibold small">{teams[1].name}</div>
+                  <div className="fw-semibold small">{team2Players}</div>
                   <div className={`h5 mb-0 ${!isTeam1Leading ? 'text-success' : 'text-primary'}`}>
                     {team2Score}
                   </div>
@@ -321,7 +416,6 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
 
     return null;
   };
-
   if (loading) {
     return (
       <div className="text-center py-4">

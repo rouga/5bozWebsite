@@ -17,7 +17,9 @@ const ActiveGame = ({
   onAddRound,
   onToggleRoundDetails,
   onFinishGame,
-  onCancelGame
+  onCancelGame,
+  onRoundWinnerChange,
+  roundWinner
 }) => {
   // Calculate game duration
   const calculateDuration = () => {
@@ -52,67 +54,67 @@ const ActiveGame = ({
   };
 
   // Calculate the current dealer based on round number and initial dealer
-const getCurrentDealer = () => {
-  if (!gameState || !gameState.initialDealer) return null;
+  const getCurrentDealer = () => {
+    if (!gameState || !gameState.initialDealer) return null;
 
-  const completedRounds = getCompletedRounds();
-  const initialDealerIndex = parseInt(gameState.initialDealer);
-  
-  if (gameType === 'chkan') {
-    // For chkan games, just rotate through the players
-    const numPlayers = gameState.players.length;
-    const currentDealerIndex = (initialDealerIndex + completedRounds) % numPlayers;
-    return {
-      name: gameState.players[currentDealerIndex]?.name,
-      index: currentDealerIndex
-    };
-  } else {
-    // For s7ab games, create an array of all players in the correct dealing order
-    // Order: team1-player1, team2-player1, team1-player2, team2-player2
-    const dealerOrder = [];
+    const completedRounds = getCompletedRounds();
+    const initialDealerIndex = parseInt(gameState.initialDealer);
     
-    // Team 1 player 1
-    if (gameState.teams[0]?.players?.[0]) {
-      dealerOrder.push({
-        teamIndex: 0,
-        playerIndex: 0,
-        name: gameState.teams[0].players[0]
-      });
+    if (gameType === 'chkan') {
+      // For chkan games, just rotate through the players
+      const numPlayers = gameState.players.length;
+      const currentDealerIndex = (initialDealerIndex + completedRounds) % numPlayers;
+      return {
+        name: gameState.players[currentDealerIndex]?.name,
+        index: currentDealerIndex
+      };
+    } else {
+      // For s7ab games, create an array of all players in the correct dealing order
+      // Order: team1-player1, team2-player1, team1-player2, team2-player2
+      const dealerOrder = [];
+      
+      // Team 1 player 1
+      if (gameState.teams[0]?.players?.[0]) {
+        dealerOrder.push({
+          teamIndex: 0,
+          playerIndex: 0,
+          name: gameState.teams[0].players[0]
+        });
+      }
+      
+      // Team 2 player 1
+      if (gameState.teams[1]?.players?.[0]) {
+        dealerOrder.push({
+          teamIndex: 1,
+          playerIndex: 0,
+          name: gameState.teams[1].players[0]
+        });
+      }
+      
+      // Team 1 player 2
+      if (gameState.teams[0]?.players?.[1]) {
+        dealerOrder.push({
+          teamIndex: 0,
+          playerIndex: 1,
+          name: gameState.teams[0].players[1]
+        });
+      }
+      
+      // Team 2 player 2
+      if (gameState.teams[1]?.players?.[1]) {
+        dealerOrder.push({
+          teamIndex: 1,
+          playerIndex: 1,
+          name: gameState.teams[1].players[1]
+        });
+      }
+      
+      if (dealerOrder.length === 0) return null;
+      
+      const currentDealerIndex = (initialDealerIndex + completedRounds) % dealerOrder.length;
+      return dealerOrder[currentDealerIndex];
     }
-    
-    // Team 2 player 1
-    if (gameState.teams[1]?.players?.[0]) {
-      dealerOrder.push({
-        teamIndex: 1,
-        playerIndex: 0,
-        name: gameState.teams[1].players[0]
-      });
-    }
-    
-    // Team 1 player 2
-    if (gameState.teams[0]?.players?.[1]) {
-      dealerOrder.push({
-        teamIndex: 0,
-        playerIndex: 1,
-        name: gameState.teams[0].players[1]
-      });
-    }
-    
-    // Team 2 player 2
-    if (gameState.teams[1]?.players?.[1]) {
-      dealerOrder.push({
-        teamIndex: 1,
-        playerIndex: 1,
-        name: gameState.teams[1].players[1]
-      });
-    }
-    
-    if (dealerOrder.length === 0) return null;
-    
-    const currentDealerIndex = (initialDealerIndex + completedRounds) % dealerOrder.length;
-    return dealerOrder[currentDealerIndex];
-  }
-};
+  };
 
   // Render round-by-round details table
   const renderRoundDetails = () => {
@@ -126,6 +128,52 @@ const getCurrentDealer = () => {
       );
     }
 
+    // Helper function to get dealer name for a specific round
+    const getDealerForRound = (roundIndex) => {
+      if (!gameState.initialDealer && gameState.initialDealer !== 0) return null;
+      
+      const initialDealerIndex = parseInt(gameState.initialDealer);
+      
+      if (gameType === 'chkan') {
+        // For chkan games
+        const players = gameState.players || [];
+        if (players.length === 0) return null;
+        
+        const numPlayers = players.length;
+        const dealerIndex = (initialDealerIndex + roundIndex) % numPlayers;
+        return players[dealerIndex]?.name;
+      } else {
+        // For s7ab games
+        // Create dealer order array
+        const dealerOrder = [];
+        
+        // Team 1 player 1
+        if (gameState.teams[0]?.players?.[0]) {
+          dealerOrder.push(gameState.teams[0].players[0]);
+        }
+        
+        // Team 2 player 1
+        if (gameState.teams[1]?.players?.[0]) {
+          dealerOrder.push(gameState.teams[1].players[0]);
+        }
+        
+        // Team 1 player 2
+        if (gameState.teams[0]?.players?.[1]) {
+          dealerOrder.push(gameState.teams[0].players[1]);
+        }
+        
+        // Team 2 player 2
+        if (gameState.teams[1]?.players?.[1]) {
+          dealerOrder.push(gameState.teams[1].players[1]);
+        }
+        
+        if (dealerOrder.length === 0) return null;
+        
+        const dealerIndex = (initialDealerIndex + roundIndex) % dealerOrder.length;
+        return dealerOrder[dealerIndex];
+      }
+    };
+
     if (gameType === 'chkan') {
       const players = gameState.players || [];
       const maxRounds = Math.max(...players.map(p => p.scores.length));
@@ -137,7 +185,21 @@ const getCurrentDealer = () => {
               <tr>
                 <th className="fw-semibold">Joueur</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    <div>R{i + 1}</div>
+                    {(gameState.initialDealer !== undefined) && (
+                      <div className="small text-muted">
+                        <i className="bi bi-shuffle me-1"></i>
+                        Jarray: {getDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameState.roundWinners && gameState.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                        Farchet {gameState.roundWinners[i]}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
@@ -171,7 +233,21 @@ const getCurrentDealer = () => {
               <tr>
                 <th className="fw-semibold">Équipe</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    <div>R{i + 1}</div>
+                    {(gameState.initialDealer !== undefined) && (
+                      <div className="small text-muted">
+                        <i className="bi bi-shuffle me-1"></i>
+                        Jarray: {getDealerForRound(i)}
+                      </div>
+                    )}
+                    {gameState.roundWinners && gameState.roundWinners[i] && (
+                      <div className="small text-warning mt-1">
+                        <i className="bi bi-trophy-fill me-1"></i>
+                          Farchet {gameState.roundWinners[i]}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
@@ -234,6 +310,37 @@ const getCurrentDealer = () => {
         </div>
       );
     }
+  };
+
+  // Generate round winner selector options
+  const renderRoundWinnerOptions = () => {
+    let options = [];
+
+    if (gameType === 'chkan') {
+      // For chkan games, all players can be winners
+      gameState.players.forEach((player, index) => {
+        options.push(
+          <option key={`player-${index}`} value={player.name}>
+            {player.name}
+          </option>
+        );
+      });
+    } else {
+      // For s7ab games, all individual players can be winners
+      gameState.teams.forEach((team, teamIndex) => {
+        if (team.players && team.players.length > 0) {
+          team.players.forEach((playerName, playerIndex) => {
+            options.push(
+              <option key={`team-${teamIndex}-player-${playerIndex}`} value={playerName}>
+                {playerName} ({team.name})
+              </option>
+            );
+          });
+        }
+      });
+    }
+
+    return options;
   };
 
   return (
@@ -381,6 +488,28 @@ const getCurrentDealer = () => {
               {roundInputError}
             </div>
           )}
+
+          {/* Round Winner Selection */}
+          <div className="mb-4">
+            <label className="form-label fw-semibold">
+              <i className="bi bi-trophy me-2 text-warning"></i>
+              Qui est allé au bout de ses cartes ?
+            </label>
+            <select 
+              className="form-select"
+              value={roundWinner || ''}
+              onChange={(e) => onRoundWinnerChange(e.target.value)}
+            >
+              <option value="">-- Sélectionner le gagnant du tour --</option>
+              {renderRoundWinnerOptions()}
+            </select>
+            <div className="form-text">
+              <small className="text-muted">
+                <i className="bi bi-info-circle me-1"></i>
+                Sélectionnez le joueur qui est allé au bout de ses cartes ce tour.
+              </small>
+            </div>
+          </div>
 
           {gameType === 'chkan' ? (
             <div className="row g-3">
