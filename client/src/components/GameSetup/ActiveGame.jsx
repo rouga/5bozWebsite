@@ -208,11 +208,13 @@ const ActiveGame = ({
               {players.map((player, index) => (
                 <tr key={index}>
                   <td className="fw-medium">{player.name}</td>
-                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
-                    <td key={roundIndex} className="text-center">
-                      {player.scores[roundIndex] !== undefined ? player.scores[roundIndex] : '–'}
-                    </td>
-                  ))}
+                    {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                      <td key={roundIndex} className="text-center">
+                        {player.scores[roundIndex] !== undefined 
+                          ? (player.scores[roundIndex] === 0 ? '-' : player.scores[roundIndex]) 
+                          : '–'}
+                      </td>
+                    ))}
                   <td className="text-center fw-bold bg-primary text-white">
                     {player.scores.reduce((a, b) => a + b, 0)}
                   </td>
@@ -265,7 +267,9 @@ const ActiveGame = ({
                   </td>
                   {Array.from({ length: maxRounds }, (_, roundIndex) => (
                     <td key={roundIndex} className="text-center">
-                      {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+                      {team.scores[roundIndex] !== undefined 
+                        ? (team.scores[roundIndex] === 0 ? '-' : team.scores[roundIndex]) 
+                        : '–'}
                     </td>
                   ))}
                   <td className="text-center fw-bold bg-primary text-white">
@@ -341,6 +345,15 @@ const ActiveGame = ({
     }
 
     return options;
+  };
+
+  // Check if all scores are 0
+  const areAllScoresZero = () => {
+    const scores = Object.values(roundScores);
+    if (scores.some(score => score === '' || score === null)) {
+      return false;
+    }
+    return scores.every(score => parseInt(score) === 0);
   };
 
   return (
@@ -500,13 +513,19 @@ const ActiveGame = ({
               value={roundWinner || ''}
               onChange={(e) => onRoundWinnerChange(e.target.value)}
             >
-              <option value="">-- Sélectionner le gagnant du tour --</option>
+              <option value="">
+                {areAllScoresZero() 
+                  ? "-- Aucun gagnant (tous les scores sont 0) --" 
+                  : "-- Sélectionner le gagnant du tour --"}
+              </option>
               {renderRoundWinnerOptions()}
             </select>
             <div className="form-text">
               <small className="text-muted">
                 <i className="bi bi-info-circle me-1"></i>
-                Sélectionnez le joueur qui est allé au bout de ses cartes ce tour.
+                {areAllScoresZero() 
+                  ? "Laisser vide si personne n'a gagné ce tour (tous les scores sont 0)" 
+                  : "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour."}
               </small>
             </div>
           </div>

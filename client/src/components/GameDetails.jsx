@@ -149,7 +149,9 @@ const GameDetails = ({ game }) => {
                   <td className="fw-medium">{player.name}</td>
                   {Array.from({ length: maxRounds }, (_, roundIndex) => (
                     <td key={roundIndex} className="text-center">
-                      {player.scores[roundIndex] !== undefined ? player.scores[roundIndex] : '–'}
+                      {player.scores[roundIndex] !== undefined 
+                        ? (player.scores[roundIndex] === 0 ? '-' : player.scores[roundIndex]) 
+                        : '–'}
                     </td>
                   ))}
                   <td className="text-center fw-bold bg-primary text-white">
@@ -215,7 +217,9 @@ const GameDetails = ({ game }) => {
                     </td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
-                        {team.scores[roundIndex] !== undefined ? team.scores[roundIndex] : '–'}
+                        {team.scores[roundIndex] !== undefined 
+                          ? (team.scores[roundIndex] === 0 ? '-' : team.scores[roundIndex]) 
+                          : '–'}
                       </td>
                     ))}
                     <td className="text-center fw-bold bg-primary text-white">
