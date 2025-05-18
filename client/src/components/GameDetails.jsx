@@ -6,35 +6,53 @@ const GameDetails = ({ game }) => {
   
   const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
   
-  // Render dealer info if available
-  const renderDealerInfo = () => {
-    if (!gameData.dealerInfo || gameData.dealerInfo.length === 0) {
-      return null;
-    }
+  // Calculate the dealer for each round
+  const calculateDealerForRound = (roundIndex) => {
+    if (!gameData.initialDealer) return null;
     
-    return (
-      <div className="mt-3 mb-4">
-        <h6 className="text-muted mb-2">Distributeurs de cartes</h6>
-        <div className="table-responsive">
-          <table className="table table-sm table-bordered">
-            <thead className="bg-light">
-              <tr>
-                <th className="fw-semibold">Tour</th>
-                <th className="fw-semibold">Distributeur</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gameData.dealerInfo.map((info) => (
-                <tr key={info.round}>
-                  <td>{info.round}</td>
-                  <td>{info.dealerName}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
+    const initialDealerIndex = parseInt(gameData.initialDealer);
+    
+    if (game.type === 'chkan') {
+      // For chkan games
+      const players = gameData.players || [];
+      if (players.length === 0) return null;
+      
+      const numPlayers = players.length;
+      const dealerIndex = (initialDealerIndex + roundIndex) % numPlayers;
+      return players[dealerIndex].name;
+    } else {
+      // For s7ab games
+      const teams = gameData.teams || [];
+      if (teams.length < 2) return null;
+      
+      // Create dealing order array
+      const dealerOrder = [];
+      
+      // Team 1 player 1
+      if (teams[0]?.players?.[0]) {
+        dealerOrder.push(teams[0].players[0]);
+      }
+      
+      // Team 2 player 1
+      if (teams[1]?.players?.[0]) {
+        dealerOrder.push(teams[1].players[0]);
+      }
+      
+      // Team 1 player 2
+      if (teams[0]?.players?.[1]) {
+        dealerOrder.push(teams[0].players[1]);
+      }
+      
+      // Team 2 player 2
+      if (teams[1]?.players?.[1]) {
+        dealerOrder.push(teams[1].players[1]);
+      }
+      
+      if (dealerOrder.length === 0) return null;
+      
+      const dealerIndex = (initialDealerIndex + roundIndex) % dealerOrder.length;
+      return dealerOrder[dealerIndex];
+    }
   };
   
   if (game.type === 'chkan') {
@@ -43,8 +61,6 @@ const GameDetails = ({ game }) => {
     
     return (
       <div className="mt-3">
-        {renderDealerInfo()}
-        
         <h6 className="text-muted mb-3">Round Details</h6>
         <div className="table-responsive">
           <table className="table table-sm table-bordered">
@@ -52,7 +68,15 @@ const GameDetails = ({ game }) => {
               <tr>
                 <th className="fw-semibold">Player</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    R{i + 1}
+                    {gameData.initialDealer && (
+                      <div className="small text-muted mt-1">
+                        <i className="bi bi-shuffle me-1"></i>
+                        {calculateDealerForRound(i)}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
@@ -83,8 +107,6 @@ const GameDetails = ({ game }) => {
     
     return (
       <div className="mt-3">
-        {renderDealerInfo()}
-        
         <h6 className="text-muted mb-3">Round Details</h6>
         <div className="table-responsive">
           <table className="table table-sm table-bordered">
@@ -92,25 +114,45 @@ const GameDetails = ({ game }) => {
               <tr>
                 <th className="fw-semibold">Team</th>
                 {Array.from({ length: maxRounds }, (_, i) => (
-                  <th key={i} className="text-center fw-semibold">R{i + 1}</th>
+                  <th key={i} className="text-center fw-semibold">
+                    R{i + 1}
+                    {gameData.initialDealer && (
+                      <div className="small text-muted mt-1">
+                        <i className="bi bi-shuffle me-1"></i>
+                        {calculateDealerForRound(i)}
+                      </div>
+                    )}
+                  </th>
                 ))}
                 <th className="text-center fw-semibold">Total</th>
               </tr>
             </thead>
             <tbody>
-              {teams.map((team, index) => (
-                <tr key={index}>
-                  <td className="fw-medium">{team.name}</td>
-                  {Array.from({ length: maxRounds }, (_, roundIndex) => (
-                    <td key={roundIndex} className="text-center">
-                      {team.scores[roundIndex] || '–'}
+              {teams.map((team, index) => {
+                // Format players as a string
+                const playersStr = team.players && team.players.length > 0 
+                  ? team.players.join(' & ') 
+                  : team.name;
+                
+                return (
+                  <tr key={index}>
+                    <td className="fw-medium">
+                      {playersStr}
+                      <div className="small text-muted">
+                        {team.name}
+                      </div>
                     </td>
-                  ))}
-                  <td className="text-center fw-bold bg-primary text-white">
-                    {team.totalScore || team.scores.reduce((a, b) => a + b, 0)}
-                  </td>
-                </tr>
-              ))}
+                    {Array.from({ length: maxRounds }, (_, roundIndex) => (
+                      <td key={roundIndex} className="text-center">
+                        {team.scores[roundIndex] || '–'}
+                      </td>
+                    ))}
+                    <td className="text-center fw-bold bg-primary text-white">
+                      {team.totalScore || team.scores.reduce((a, b) => a + b, 0)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
