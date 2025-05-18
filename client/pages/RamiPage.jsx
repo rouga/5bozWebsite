@@ -417,7 +417,22 @@ export default function RamiPage() {
 
   // Helper functions
   const initializeRoundScores = useCallback((state) => {
-    dispatchGame({ type: 'INIT_ROUND_SCORES', payload: state });
+    const newRoundScores = {};
+    if (state.type === 'chkan') {
+      state.players.forEach((_, index) => {
+        newRoundScores[`player-${index}`] = '';
+      });
+    } else {
+      // For S7ab, initialize scores for each player in each team
+      state.teams.forEach((team, teamIndex) => {
+        if (team.players) {
+          team.players.forEach((_, playerIndex) => {
+            newRoundScores[`team-${teamIndex}-player-${playerIndex}`] = '';
+          });
+        }
+      });
+    }
+    dispatchGame({ type: 'SET_ROUND_SCORES', payload: newRoundScores });
   }, []);
 
   const isDuplicateUsername = (username) => {
@@ -655,9 +670,32 @@ export default function RamiPage() {
         player.scores.push(parseInt(gameData.roundScores[scoreKey]));
       });
     } else {
-      updatedState.teams.forEach((team, index) => {
-        const scoreKey = `team-${index}`;
-        team.scores.push(parseInt(gameData.roundScores[scoreKey]));
+      // For S7ab, we need to handle both team scores and individual player scores
+      updatedState.teams.forEach((team, teamIndex) => {
+        // Initialize playerScores array if it doesn't exist
+        if (!team.playerScores) {
+          team.playerScores = [];
+        }
+        
+        // For this round, collect all player scores
+        const roundPlayerScores = [];
+        
+        if (team.players) {
+          team.players.forEach((_, playerIndex) => {
+            const scoreKey = `team-${teamIndex}-player-${playerIndex}`;
+            const playerScore = parseInt(gameData.roundScores[scoreKey]);
+            roundPlayerScores.push(playerScore);
+          });
+        }
+        
+        // Add player scores for this round
+        team.playerScores.push(roundPlayerScores);
+        
+        // Calculate total team score for this round (sum of player scores)
+        const roundTeamScore = roundPlayerScores.reduce((sum, score) => sum + score, 0);
+        
+        // Add to the team scores array
+        team.scores.push(roundTeamScore);
       });
     }
 
@@ -682,8 +720,6 @@ export default function RamiPage() {
       dispatchGame({ type: 'SET_SHOW_ROUND_DETAILS', payload: true });
     }
   };
-
-  
 
   const handleFinishGame = async () => {
     try {
@@ -729,14 +765,37 @@ export default function RamiPage() {
       } else {
         // S7ab game with individual player tracking
         const teamsWithTotals = gameData.gameState.teams.map(team => {
-          // Track authenticated players within each team
-          const authenticatedPlayers = team.players
-            ? team.players.filter(playerName => registeredUsernames.includes(playerName.toLowerCase()))
-            : [];
+          // Process player data if available
+          let playerData = [];
+          let authenticatedPlayers = [];
+          
+          if (team.players && team.playerScores) {
+            playerData = team.players.map((playerName, playerIndex) => {
+              // Calculate total score for this player
+              let totalPlayerScore = 0;
+              team.playerScores.forEach(roundScores => {
+                if (roundScores[playerIndex] !== undefined) {
+                  totalPlayerScore += roundScores[playerIndex];
+                }
+              });
+              
+              const isAuthenticated = registeredUsernames.includes(playerName.toLowerCase());
+              if (isAuthenticated) {
+                authenticatedPlayers.push(playerName);
+              }
+              
+              return {
+                name: playerName,
+                totalScore: totalPlayerScore,
+                isAuthenticated
+              };
+            });
+          }
           
           return {
             ...team,
             totalScore: team.scores.reduce((sum, score) => sum + score, 0),
+            playerData,
             authenticatedPlayers
           };
         });
@@ -744,7 +803,7 @@ export default function RamiPage() {
         const sortedTeams = [...teamsWithTotals].sort((a, b) => a.totalScore - b.totalScore);
         
         // Create a list of all authenticated players
-        const authenticatedPlayers = teamsWithTotals.flatMap(t => t.authenticatedPlayers || []);
+        const allAuthenticatedPlayers = teamsWithTotals.flatMap(t => t.authenticatedPlayers || []);
         
         gameDataToSave = {
           type: 's7ab',
@@ -759,7 +818,7 @@ export default function RamiPage() {
             winner: sortedTeams[0].name,
             team1Players: teamsWithTotals[0].players || [],
             team2Players: teamsWithTotals[1].players || [],
-            authenticatedPlayers
+            authenticatedPlayers: allAuthenticatedPlayers
           }
         };
       }

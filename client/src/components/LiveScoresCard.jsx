@@ -1,5 +1,6 @@
 // client/src/components/LiveScoresCard.jsx
 import React, { useState, useEffect } from 'react';
+import ScoreContributionStats from './ScoreContributionStats';
 
 // Utility function to calculate game duration
 const calculateDuration = (createdAt, currentTime) => {
@@ -157,6 +158,9 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </table>
           </div>
           
+          {/* Score Statistics */}
+          <ScoreContributionStats gameData={gameData} gameType={gameType} />
+          
           {/* Round Win Statistics */}
           {renderWinStats(gameData)}
         </>
@@ -261,6 +265,9 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
               </tbody>
             </table>
           </div>
+          
+          {/* Score Statistics */}
+          <ScoreContributionStats gameData={gameData} gameType={gameType} />
           
           {/* Round Win Statistics */}
           {renderWinStats(gameData)}

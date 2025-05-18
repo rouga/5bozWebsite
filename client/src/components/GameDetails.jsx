@@ -1,5 +1,6 @@
 // client/src/components/GameDetails.jsx
 import React from 'react';
+import ScoreContributionStats from './ScoreContributionStats';
 
 const GameDetails = ({ game }) => {
   if (!game || !game.game_data) return null;
@@ -163,6 +164,9 @@ const GameDetails = ({ game }) => {
           </table>
         </div>
         
+        {/* Score Statistics */}
+        <ScoreContributionStats gameData={gameData} gameType={game.type} />
+        
         {/* Round Win Statistics */}
         {renderWinStats()}
       </div>
@@ -231,6 +235,9 @@ const GameDetails = ({ game }) => {
             </tbody>
           </table>
         </div>
+        
+        {/* Score Statistics */}
+        <ScoreContributionStats gameData={gameData} gameType={game.type} />
         
         {/* Round Win Statistics */}
         {renderWinStats()}

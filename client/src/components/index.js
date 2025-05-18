@@ -11,3 +11,4 @@ export { default as LiveScoresCard } from './LiveScoresCard';
 export { default as GameInvitationModal } from './GameInvitationModal';
 export { default as InvitationNotificationBadge } from './InvitationNotificationBadge';
 export { default as GlobalInvitationHandler } from './GlobalInvitationHandler';
+export { default as ScoreContributionStats } from './ScoreContributionStats';

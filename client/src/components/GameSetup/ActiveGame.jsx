@@ -1,6 +1,7 @@
 // client/src/components/GameSetup/ActiveGame.jsx
 import React from 'react';
 import { FormInput } from '../index';
+import ScoreContributionStats from '../ScoreContributionStats';
 
 const ActiveGame = ({
   gameType,
@@ -481,6 +482,9 @@ const ActiveGame = ({
             <div className="card-footer bg-light">
               <h6 className="text-muted mb-3">Round-by-Round Breakdown</h6>
               {renderRoundDetails()}
+              
+              {/* Score Statistics */}
+              {completedRounds > 0 && <ScoreContributionStats gameData={gameState} gameType={gameType} />}
             </div>
           )}
         </div>
@@ -560,27 +564,25 @@ const ActiveGame = ({
             </div>
           ) : (
             <div className="row g-3">
-              {gameState.teams.map((team, index) => (
-                <div key={index} className="col-12 col-md-6">
-                  <FormInput
-                    label={
-                      <div>
-                        <div className="fw-semibold">{team.name}</div>
-                        {team.players && (
-                          <small className="text-muted">
-                            {team.players.join(' & ')}
-                          </small>
-                        )}
-                      </div>
-                    }
-                    type="number"
-                    name={`team-${index}`}
-                    value={roundScores[`team-${index}`] || ''}
-                    onChange={(e) => onRoundScoreChange(`team-${index}`, e.target.value)}
-                    placeholder="Enter score"
-                    min="0"
-                  />
-                </div>
+              {gameState.teams.map((team, teamIndex) => (
+                <React.Fragment key={teamIndex}>
+                  <div className="col-12">
+                    <h6 className="fw-semibold border-bottom pb-2">{team.name}</h6>
+                  </div>
+                  {team.players && team.players.map((playerName, playerIndex) => (
+                    <div key={playerIndex} className="col-12 col-md-6">
+                      <FormInput
+                        label={playerName}
+                        type="number"
+                        name={`team-${teamIndex}-player-${playerIndex}`}
+                        value={roundScores[`team-${teamIndex}-player-${playerIndex}`] || ''}
+                        onChange={(e) => onRoundScoreChange(`team-${teamIndex}-player-${playerIndex}`, e.target.value)}
+                        placeholder="Enter player score"
+                        min="0"
+                      />
+                    </div>
+                  ))}
+                </React.Fragment>
               ))}
             </div>
           )}
