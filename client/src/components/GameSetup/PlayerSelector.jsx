@@ -21,7 +21,9 @@ const PlayerSelector = ({
   onToggleChkanCustomInput,
   error,
   onGoBack,
-  onSendInvitations
+  onSendInvitations,
+  initialDealer,
+  setInitialDealer
 }) => {
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -141,6 +143,113 @@ const PlayerSelector = ({
     }
     
     onSendInvitations();
+  };
+
+  // Generate options for dealer selection - S7ab
+const renderS7abDealerOptions = () => {
+  const dealerOptions = [];
+  let optionIndex = 0;
+  
+  // Team 1 player 1
+  if (teamPlayers.team1.player1) {
+    dealerOptions.push(
+      <option key={optionIndex} value={optionIndex}>
+        {teamPlayers.team1.player1} (Équipe 1, Joueur 1)
+      </option>
+    );
+    optionIndex++;
+  }
+  
+  // Team 2 player 1
+  if (teamPlayers.team2.player1) {
+    dealerOptions.push(
+      <option key={optionIndex} value={optionIndex}>
+        {teamPlayers.team2.player1} (Équipe 2, Joueur 1)
+      </option>
+    );
+    optionIndex++;
+  }
+  
+  // Team 1 player 2
+  if (teamPlayers.team1.player2) {
+    dealerOptions.push(
+      <option key={optionIndex} value={optionIndex}>
+        {teamPlayers.team1.player2} (Équipe 1, Joueur 2)
+      </option>
+    );
+    optionIndex++;
+  }
+  
+  // Team 2 player 2
+  if (teamPlayers.team2.player2) {
+    dealerOptions.push(
+      <option key={optionIndex} value={optionIndex}>
+        {teamPlayers.team2.player2} (Équipe 2, Joueur 2)
+      </option>
+    );
+    optionIndex++;
+  }
+  
+  return dealerOptions;
+};
+
+  // Generate options for dealer selection - Chkan
+  const renderChkanDealerOptions = () => {
+    return Object.entries(chkanPlayers)
+      .filter(([_, name]) => name && name.trim() !== '')
+      .map(([index, name]) => (
+        <option key={index} value={index}>
+          {name}
+        </option>
+      ));
+  };
+
+  // Render dealer selection section
+  const renderDealerSelection = () => {
+    let dealerOptions;
+    
+    if (gameType === 'chkan') {
+      dealerOptions = renderChkanDealerOptions();
+    } else {
+      dealerOptions = renderS7abDealerOptions();
+    }
+    
+    if (dealerOptions.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="card mb-4">
+        <div className="card-header">
+          <h6 className="mb-0">Sélectionner le premier donneur</h6>
+        </div>
+        <div className="card-body">
+          <div className="row">
+            <div className="col-12 col-md-6 mx-auto">
+              <div className="form-group">
+                <label className="form-label fw-semibold">
+                  Qui distribue les cartes en premier ?
+                </label>
+                <select 
+                  className="form-select"
+                  value={initialDealer === null ? '' : initialDealer}
+                  onChange={(e) => setInitialDealer(e.target.value === '' ? null : parseInt(e.target.value))}
+                >
+                  <option value="">-- Sélectionner un joueur --</option>
+                  {dealerOptions}
+                </select>
+                <div className="form-text">
+                  <small className="text-muted">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Les joueurs alterneront pour distribuer les cartes à chaque tour.
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Render player selection for S7ab with validation
@@ -329,6 +438,7 @@ const PlayerSelector = ({
         )}
         
         {renderChkanPlayerSelection()}
+        {renderDealerSelection()}
         
         <div className="text-center">
           <button 
@@ -341,7 +451,7 @@ const PlayerSelector = ({
           <button 
             className="btn btn-primary btn-lg"
             onClick={handleSendInvitations}
-            disabled={hasValidationErrors()}
+            disabled={hasValidationErrors() || initialDealer === null}
           >
             <i className="bi bi-paper-plane me-2"></i>
             Envoyer les invitations
@@ -375,6 +485,8 @@ const PlayerSelector = ({
           </div>
         </div>
         
+        {renderDealerSelection()}
+        
         <div className="text-center">
           <button 
             className="btn btn-outline-secondary me-3"
@@ -386,7 +498,7 @@ const PlayerSelector = ({
           <button 
             className="btn btn-primary btn-lg"
             onClick={handleSendInvitations}
-            disabled={hasValidationErrors()}
+            disabled={hasValidationErrors() || initialDealer === null}
           >
             <i className="bi bi-paper-plane me-2"></i>
             Envoyer les invitations

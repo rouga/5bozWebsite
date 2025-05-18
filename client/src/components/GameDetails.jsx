@@ -6,12 +6,45 @@ const GameDetails = ({ game }) => {
   
   const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
   
+  // Render dealer info if available
+  const renderDealerInfo = () => {
+    if (!gameData.dealerInfo || gameData.dealerInfo.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="mt-3 mb-4">
+        <h6 className="text-muted mb-2">Distributeurs de cartes</h6>
+        <div className="table-responsive">
+          <table className="table table-sm table-bordered">
+            <thead className="bg-light">
+              <tr>
+                <th className="fw-semibold">Tour</th>
+                <th className="fw-semibold">Distributeur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gameData.dealerInfo.map((info) => (
+                <tr key={info.round}>
+                  <td>{info.round}</td>
+                  <td>{info.dealerName}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+  
   if (game.type === 'chkan') {
     const players = gameData.players || [];
     const maxRounds = Math.max(...players.map(p => p.scores.length));
     
     return (
       <div className="mt-3">
+        {renderDealerInfo()}
+        
         <h6 className="text-muted mb-3">Round Details</h6>
         <div className="table-responsive">
           <table className="table table-sm table-bordered">
@@ -50,6 +83,8 @@ const GameDetails = ({ game }) => {
     
     return (
       <div className="mt-3">
+        {renderDealerInfo()}
+        
         <h6 className="text-muted mb-3">Round Details</h6>
         <div className="table-responsive">
           <table className="table table-sm table-bordered">

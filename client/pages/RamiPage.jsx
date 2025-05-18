@@ -32,9 +32,12 @@ const gameStateReducer = (state, action) => {
         currentGameId: null,
         playerAcceptanceStatus: {},
         allInvitationsAccepted: false,
+        initialDealer: null,
       };
     case 'SET_GAME_TYPE':
       return { ...state, gameType: action.payload };
+    case 'SET_INITIAL_DEALER':
+       return { ...state, initialDealer: action.payload };
     case 'SET_GAME_STATE':
       return { ...state, gameState: action.payload };
     case 'SET_GAME_CREATED_AT':
@@ -203,6 +206,7 @@ export default function RamiPage() {
   const [scores, setScores] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [initialDealer, setInitialDealer] = useState(null);
   const scoresPerPage = 5;
 
   // Socket event handlers for invitations
@@ -557,7 +561,8 @@ export default function RamiPage() {
       initialState = {
         type: gameData.gameType,
         players,
-        currentRound: 1
+        currentRound: 1,
+        initialDealer: initialDealer // Add this line
       };
     } else {
       const team1Players = [playersData.teamPlayers.team1.player1, playersData.teamPlayers.team1.player2].filter(p => p);
@@ -577,7 +582,8 @@ export default function RamiPage() {
             scores: [] 
           }
         ],
-        currentRound: 1
+        currentRound: 1,
+        initialDealer: initialDealer // Add this line
       };
     }
     
@@ -659,7 +665,7 @@ export default function RamiPage() {
     }
   };
 
-    const handleFinishGame = async () => {
+  const handleFinishGame = async () => {
     try {
       setLoading(true);
       
@@ -668,6 +674,77 @@ export default function RamiPage() {
       
       // Get list of registered users for authentication tracking
       const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
+      
+      // Create an array of dealer information for each round
+      const dealerInfo = [];
+      if (gameData.gameType === 'chkan') {
+        const numPlayers = gameData.gameState.players.length;
+        const initialDealerIndex = parseInt(gameData.gameState.initialDealer);
+        
+        // For each completed round, calculate who was the dealer
+        for (let i = 0; i < getCompletedRounds(); i++) {
+          const dealerIndex = (initialDealerIndex + i) % numPlayers;
+          dealerInfo.push({
+            round: i + 1,
+            dealerName: gameData.gameState.players[dealerIndex].name,
+            dealerIndex: dealerIndex
+          });
+        }
+      } else {
+        // For s7ab, create a dealer order array
+        const dealerOrder = [];
+        const teams = gameData.gameState.teams;
+        
+        // Build dealer order in the correct sequence
+        // Team 1 player 1
+        if (teams[0]?.players?.[0]) {
+          dealerOrder.push({
+            teamIndex: 0,
+            playerIndex: 0,
+            name: teams[0].players[0]
+          });
+        }
+        
+        // Team 2 player 1
+        if (teams[1]?.players?.[0]) {
+          dealerOrder.push({
+            teamIndex: 1,
+            playerIndex: 0,
+            name: teams[1].players[0]
+          });
+        }
+        
+        // Team 1 player 2
+        if (teams[0]?.players?.[1]) {
+          dealerOrder.push({
+            teamIndex: 0,
+            playerIndex: 1,
+            name: teams[0].players[1]
+          });
+        }
+        
+        // Team 2 player 2
+        if (teams[1]?.players?.[1]) {
+          dealerOrder.push({
+            teamIndex: 1,
+            playerIndex: 1,
+            name: teams[1].players[1]
+          });
+        }
+        
+        // For each completed round, calculate who was the dealer
+        const initialDealerIndex = parseInt(gameData.gameState.initialDealer);
+        for (let i = 0; i < getCompletedRounds(); i++) {
+          const dealerIndex = (initialDealerIndex + i) % dealerOrder.length;
+          const dealer = dealerOrder[dealerIndex];
+          dealerInfo.push({
+            round: i + 1,
+            dealerName: dealer.name,
+            teamIndex: dealer.teamIndex,
+            playerIndex: dealer.playerIndex
+          });
+        }
+      }
       
       if (gameData.gameType === 'chkan') {
         const playersWithTotals = gameData.gameState.players.map(player => ({
@@ -699,7 +776,9 @@ export default function RamiPage() {
             players: playersWithTotals,
             winners: winners.map(p => p.name),
             losers: losers.map(p => p.name),
-            authenticatedPlayers
+            authenticatedPlayers,
+            dealerInfo, // Add dealer information
+            initialDealer: gameData.gameState.initialDealer
           }
         };
       } else {
@@ -736,7 +815,9 @@ export default function RamiPage() {
             winner: sortedTeams[0].name,
             team1Players: teamsWithTotals[0].players,
             team2Players: teamsWithTotals[1].players,
-            authenticatedPlayers
+            authenticatedPlayers,
+            dealerInfo, // Add dealer information
+            initialDealer: gameData.gameState.initialDealer
           }
         };
       }
@@ -857,6 +938,8 @@ export default function RamiPage() {
           error={roundInputError}
           onGoBack={handleGoBack}
           onSendInvitations={handleSendInvitations}
+          initialDealer={initialDealer}                 // Add these two lines
+          setInitialDealer={setInitialDealer}
         />
       );
     }

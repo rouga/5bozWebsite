@@ -51,6 +51,69 @@ const ActiveGame = ({
     }
   };
 
+  // Calculate the current dealer based on round number and initial dealer
+const getCurrentDealer = () => {
+  if (!gameState || !gameState.initialDealer) return null;
+
+  const completedRounds = getCompletedRounds();
+  const initialDealerIndex = parseInt(gameState.initialDealer);
+  
+  if (gameType === 'chkan') {
+    // For chkan games, just rotate through the players
+    const numPlayers = gameState.players.length;
+    const currentDealerIndex = (initialDealerIndex + completedRounds) % numPlayers;
+    return {
+      name: gameState.players[currentDealerIndex]?.name,
+      index: currentDealerIndex
+    };
+  } else {
+    // For s7ab games, create an array of all players in the correct dealing order
+    // Order: team1-player1, team2-player1, team1-player2, team2-player2
+    const dealerOrder = [];
+    
+    // Team 1 player 1
+    if (gameState.teams[0]?.players?.[0]) {
+      dealerOrder.push({
+        teamIndex: 0,
+        playerIndex: 0,
+        name: gameState.teams[0].players[0]
+      });
+    }
+    
+    // Team 2 player 1
+    if (gameState.teams[1]?.players?.[0]) {
+      dealerOrder.push({
+        teamIndex: 1,
+        playerIndex: 0,
+        name: gameState.teams[1].players[0]
+      });
+    }
+    
+    // Team 1 player 2
+    if (gameState.teams[0]?.players?.[1]) {
+      dealerOrder.push({
+        teamIndex: 0,
+        playerIndex: 1,
+        name: gameState.teams[0].players[1]
+      });
+    }
+    
+    // Team 2 player 2
+    if (gameState.teams[1]?.players?.[1]) {
+      dealerOrder.push({
+        teamIndex: 1,
+        playerIndex: 1,
+        name: gameState.teams[1].players[1]
+      });
+    }
+    
+    if (dealerOrder.length === 0) return null;
+    
+    const currentDealerIndex = (initialDealerIndex + completedRounds) % dealerOrder.length;
+    return dealerOrder[currentDealerIndex];
+  }
+};
+
   // Render round-by-round details table
   const renderRoundDetails = () => {
     const completedRounds = getCompletedRounds();
@@ -143,6 +206,35 @@ const ActiveGame = ({
 
   const completedRounds = getCompletedRounds();
   const duration = calculateDuration();
+  const currentDealer = getCurrentDealer();
+
+  // Function to format dealer display
+  const formatDealerDisplay = () => {
+    if (!currentDealer) return null;
+    
+    if (gameType === 'chkan') {
+      return (
+        <div className="alert alert-info d-flex align-items-center">
+          <i className="bi bi-shuffle me-2"></i>
+          <div>
+            <strong>{currentDealer.name}</strong> doit distribuer les cartes pour ce tour
+          </div>
+        </div>
+      );
+    } else {
+      // For s7ab games
+      const teamName = gameState.teams[currentDealer.teamIndex]?.name || `Équipe ${currentDealer.teamIndex + 1}`;
+      return (
+        <div className="alert alert-info d-flex align-items-center">
+          <i className="bi bi-shuffle me-2"></i>
+          <div>
+            <strong>{currentDealer.name}</strong> 
+            <span className="ms-1">de {teamName} doit distribuer les cartes pour ce tour</span>
+          </div>
+        </div>
+      );
+    }
+  };
 
   return (
     <div>
@@ -199,6 +291,9 @@ const ActiveGame = ({
           </div>
         </div>
       </div>
+
+      {/* Current Dealer Display */}
+      {formatDealerDisplay()}
 
       {/* Current Standings */}
       {gameState.currentRound > 1 && (
