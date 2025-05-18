@@ -55,6 +55,62 @@ const GameDetails = ({ game }) => {
     }
   };
   
+  // Calculate round win statistics
+  const calculateRoundWinStats = () => {
+    if (!gameData.roundWinners || !Array.isArray(gameData.roundWinners)) {
+      return [];
+    }
+    
+    // Count wins for each player
+    const winCounts = {};
+    gameData.roundWinners.forEach(winner => {
+      if (winner) {
+        winCounts[winner] = (winCounts[winner] || 0) + 1;
+      }
+    });
+    
+    // Convert to array and sort by count descending
+    const stats = Object.entries(winCounts).map(([name, count]) => ({
+      name,
+      count
+    }));
+    
+    stats.sort((a, b) => b.count - a.count);
+    return stats;
+  };
+  
+  const renderWinStats = () => {
+    const stats = calculateRoundWinStats();
+    
+    if (stats.length === 0) {
+      return (
+        <div className="text-center text-muted">
+          <small>No round winner data available</small>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="mt-3 mb-3">
+        <h6 className="text-muted mb-2">Round Win Statistics</h6>
+        <div className="row g-2">
+          {stats.map((stat, index) => (
+            <div key={index} className="col-6 col-md-3">
+              <div className={`text-center p-2 rounded ${index === 0 ? 'bg-warning bg-opacity-10' : 'bg-light'}`}>
+                <div className="fw-semibold small">{stat.name}</div>
+                <div className="d-flex align-items-center justify-content-center gap-1">
+                  <i className="bi bi-trophy-fill text-warning"></i>
+                  <span className="h5 mb-0">{stat.count}</span>
+                  <small className="text-muted">wins</small>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
   if (game.type === 'chkan') {
     const players = gameData.players || [];
     const maxRounds = Math.max(...players.map(p => p.scores.length));
@@ -104,6 +160,9 @@ const GameDetails = ({ game }) => {
             </tbody>
           </table>
         </div>
+        
+        {/* Round Win Statistics */}
+        {renderWinStats()}
       </div>
     );
   } else {
@@ -168,6 +227,9 @@ const GameDetails = ({ game }) => {
             </tbody>
           </table>
         </div>
+        
+        {/* Round Win Statistics */}
+        {renderWinStats()}
       </div>
     );
   }
