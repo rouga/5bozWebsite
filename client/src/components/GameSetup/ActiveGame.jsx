@@ -1,5 +1,5 @@
 // client/src/components/GameSetup/ActiveGame.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FormInput } from '../index';
 import ScoreContributionStats from '../ScoreContributionStats';
 
@@ -22,6 +22,29 @@ const ActiveGame = ({
   onRoundWinnerChange,
   roundWinner
 }) => {
+  // Handle automatic score setting for winning team
+  useEffect(() => {
+    if (gameType === 's7ab' && roundWinner) {
+      // Step 1: Find which team the winner belongs to
+      let winningTeamIndex = -1;
+      gameState.teams.forEach((team, index) => {
+        if (team.players && team.players.includes(roundWinner)) {
+          winningTeamIndex = index;
+        }
+      });
+      
+      // Step 2: Set scores for all winning team members to 0
+      if (winningTeamIndex !== -1) {
+        const team = gameState.teams[winningTeamIndex];
+        if (team.players) {
+          team.players.forEach((_, playerIndex) => {
+            onRoundScoreChange(`team-${winningTeamIndex}-player-${playerIndex}`, '0');
+          });
+        }
+      }
+    }
+  }, [roundWinner, gameType]);
+
   // Calculate game duration
   const calculateDuration = () => {
     if (!gameCreatedAt) return '';
@@ -114,6 +137,94 @@ const ActiveGame = ({
       
       const currentDealerIndex = (initialDealerIndex + completedRounds) % dealerOrder.length;
       return dealerOrder[currentDealerIndex];
+    }
+  };
+
+  // Helper function to check if all required scores are entered
+  const areAllScoresEntered = () => {
+    if (gameType === 'chkan') {
+      // For chkan, all player scores should be entered
+      return gameState.players.every((_, index) => 
+        roundScores[`player-${index}`] !== undefined && 
+        roundScores[`player-${index}`] !== ''
+      );
+    } else {
+      // For s7ab, ensure all team member scores are entered
+      return gameState.teams.every((team, teamIndex) => 
+        team.players && team.players.every((_, playerIndex) => 
+          roundScores[`team-${teamIndex}-player-${playerIndex}`] !== undefined &&
+          roundScores[`team-${teamIndex}-player-${playerIndex}`] !== ''
+        )
+      );
+    }
+  };
+
+  // Helper function for handling add round with pre-validation
+  const handleAddRound = () => {
+    // Step 1: Make a copy of the current roundScores
+    const updatedScores = {...roundScores};
+    let scoresUpdated = false;
+    
+    // Step 2: Ensure winning team scores are set to 0
+    if (gameType === 's7ab' && roundWinner) {
+      let winningTeamIndex = -1;
+      gameState.teams.forEach((team, index) => {
+        if (team.players && team.players.includes(roundWinner)) {
+          winningTeamIndex = index;
+        }
+      });
+      
+      if (winningTeamIndex !== -1) {
+        const team = gameState.teams[winningTeamIndex];
+        if (team.players) {
+          team.players.forEach((_, playerIndex) => {
+            const key = `team-${winningTeamIndex}-player-${playerIndex}`;
+            if (updatedScores[key] !== '0') {
+              updatedScores[key] = '0';
+              scoresUpdated = true;
+            }
+          });
+        }
+      }
+    }
+    
+    // Step 3: Set any missing scores to '0'
+    if (gameType === 'chkan') {
+      gameState.players.forEach((_, index) => {
+        const key = `player-${index}`;
+        if (updatedScores[key] === undefined || updatedScores[key] === '') {
+          updatedScores[key] = '0';
+          scoresUpdated = true;
+        }
+      });
+    } else { // s7ab
+      gameState.teams.forEach((team, teamIndex) => {
+        if (team.players) {
+          team.players.forEach((_, playerIndex) => {
+            const key = `team-${teamIndex}-player-${playerIndex}`;
+            if (updatedScores[key] === undefined || updatedScores[key] === '') {
+              updatedScores[key] = '0';
+              scoresUpdated = true;
+            }
+          });
+        }
+      });
+    }
+    
+    // Step 4: Update all scores at once before calling onAddRound
+    if (scoresUpdated) {
+      // Update all changed scores
+      Object.keys(updatedScores).forEach(key => {
+        if (roundScores[key] !== updatedScores[key]) {
+          onRoundScoreChange(key, updatedScores[key]);
+        }
+      });
+      
+      // Call onAddRound after a very short delay to ensure state updates
+      setTimeout(() => onAddRound(), 50);
+    } else {
+      // No updates needed, call onAddRound directly
+      onAddRound();
     }
   };
 
@@ -357,6 +468,29 @@ const ActiveGame = ({
     return scores.every(score => parseInt(score) === 0);
   };
 
+  // Check if a player belongs to the winning team in s7ab mode
+  const isPlayerInWinningTeam = (teamIndex, playerName) => {
+    if (gameType !== 's7ab' || !roundWinner) return false;
+    
+    // Check if the selected round winner is in this team
+    const team = gameState.teams[teamIndex];
+    return team.players && team.players.includes(roundWinner);
+  };
+
+  // Get the winning team index if there is a round winner
+  const getWinningTeamIndex = () => {
+    if (gameType !== 's7ab' || !roundWinner) return -1;
+    
+    let winningTeamIndex = -1;
+    gameState.teams.forEach((team, index) => {
+      if (team.players && team.players.includes(roundWinner)) {
+        winningTeamIndex = index;
+      }
+    });
+    
+    return winningTeamIndex;
+  };
+
   return (
     <div>
       {/* Game Progress Header */}
@@ -527,8 +661,8 @@ const ActiveGame = ({
             <div className="form-text">
               <small className="text-muted">
                 <i className="bi bi-info-circle me-1"></i>
-                {areAllScoresZero() 
-                  ? "Laisser vide si personne n'a gagné ce tour (tous les scores sont 0)" 
+                {gameType === 's7ab' 
+                  ? "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour. Les scores de son équipe seront automatiquement mis à 0."
                   : "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour."}
               </small>
             </div>
@@ -564,33 +698,70 @@ const ActiveGame = ({
             </div>
           ) : (
             <div className="row g-3">
-              {gameState.teams.map((team, teamIndex) => (
-                <React.Fragment key={teamIndex}>
-                  <div className="col-12">
-                    <h6 className="fw-semibold border-bottom pb-2">{team.name}</h6>
-                  </div>
-                  {team.players && team.players.map((playerName, playerIndex) => (
-                    <div key={playerIndex} className="col-12 col-md-6">
-                      <FormInput
-                        label={playerName}
-                        type="number"
-                        name={`team-${teamIndex}-player-${playerIndex}`}
-                        value={roundScores[`team-${teamIndex}-player-${playerIndex}`] || ''}
-                        onChange={(e) => onRoundScoreChange(`team-${teamIndex}-player-${playerIndex}`, e.target.value)}
-                        placeholder="Enter player score"
-                        min="0"
-                      />
+              {gameState.teams.map((team, teamIndex) => {
+                const isWinningTeam = getWinningTeamIndex() === teamIndex;
+                
+                return (
+                  <React.Fragment key={teamIndex}>
+                    <div className="col-12">
+                      <h6 className="fw-semibold border-bottom pb-2">
+                        {team.name}
+                        {isWinningTeam && (
+                          <span className="badge bg-success ms-2">
+                            <i className="bi bi-trophy-fill me-1"></i>
+                            Winning Team
+                          </span>
+                        )}
+                      </h6>
                     </div>
-                  ))}
-                </React.Fragment>
-              ))}
+                    {team.players && team.players.map((playerName, playerIndex) => {
+                      const scoreKey = `team-${teamIndex}-player-${playerIndex}`;
+                      // Player is part of the winning team
+                      const isWinner = isWinningTeam;
+                      
+                      return (
+                        <div key={playerIndex} className="col-12 col-md-6">
+                          <FormInput
+                            label={
+                              <>
+                                {playerName}
+                                {playerName === roundWinner && (
+                                  <span className="badge bg-warning ms-2">
+                                    <i className="bi bi-trophy-fill me-1"></i>
+                                    Round Winner
+                                  </span>
+                                )}
+                              </>
+                            }
+                            type="number"
+                            name={scoreKey}
+                            value={isWinner ? '0' : (roundScores[scoreKey] || '')}
+                            onChange={(e) => {
+                              // If this is the winning team, force score to 0
+                              if (isWinner) {
+                                onRoundScoreChange(scoreKey, '0');
+                              } else {
+                                onRoundScoreChange(scoreKey, e.target.value);
+                              }
+                            }}
+                            placeholder={isWinner ? "0 (Winner)" : "Enter player score"}
+                            min="0"
+                            disabled={isWinner}
+                            helpText={isWinner ? "Score is set to 0 automatically for winners" : null}
+                          />
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
 
           <div className="text-center mt-4">
             <button 
               className="btn btn-primary btn-lg px-4"
-              onClick={onAddRound}
+              onClick={handleAddRound}
             >
               <i className="bi bi-plus-circle me-2"></i>
               Add Round {gameState.currentRound}
