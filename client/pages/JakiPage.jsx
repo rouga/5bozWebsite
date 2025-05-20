@@ -625,7 +625,7 @@ export default function JakiPage() {
                 onClick={handleCancelGame}
               >
                 <i className="bi bi-x-circle me-1"></i>
-                Cancel
+                Canceller
               </button>
               <button 
                 className="btn btn-sm btn-light"
@@ -640,7 +640,7 @@ export default function JakiPage() {
                 ) : (
                   <>
                     <i className="bi bi-check-circle me-1"></i>
-                    Finish Game
+                    Finir la partie.
                   </>
                 )}
               </button>
@@ -652,7 +652,7 @@ export default function JakiPage() {
           <div className="mb-4">
             <div className="alert alert-info">
               <i className="bi bi-info-circle me-2"></i>
-              Game to {winningScore} points. First player to reach {winningScore} points wins!
+             Jeu sur {winningScore} points. Premier joueur qui collecte {winningScore} points gagne.
             </div>
           </div>
           
@@ -667,7 +667,7 @@ export default function JakiPage() {
                       {player.score >= winningScore && (
                         <span className="badge bg-warning text-dark">
                           <i className="bi bi-trophy-fill me-1"></i>
-                          Winner
+                          Gagnant
                         </span>
                       )}
                     </div>
@@ -687,7 +687,7 @@ export default function JakiPage() {
           {completedRounds > 0 && (
             <div className="card mb-4">
               <div className="card-header d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Round History</h6>
+                <h6 className="mb-0">Historique des tours</h6>
                 <button
                   className="btn btn-sm btn-outline-primary"
                   onClick={handleToggleRoundDetails}
@@ -695,12 +695,12 @@ export default function JakiPage() {
                   {gameData.showRoundDetails ? (
                     <>
                       <i className="bi bi-chevron-up me-1"></i>
-                      Hide Details
+                      Cacher Details
                     </>
                   ) : (
                     <>
                       <i className="bi bi-chevron-down me-1"></i>
-                      Show Details
+                      Montrer  Details
                     </>
                   )}
                 </button>
@@ -712,8 +712,8 @@ export default function JakiPage() {
                     <table className="table table-sm table-bordered">
                       <thead className="bg-light">
                         <tr>
-                          <th>Round</th>
-                          <th>Winner</th>
+                          <th>Tour</th>
+                          <th>Gagnant</th>
                           <th>Points</th>
                           <th>Type</th>
                         </tr>
@@ -750,12 +750,12 @@ export default function JakiPage() {
               <div className="card-header">
                 <h6 className="mb-0">
                   <i className="bi bi-plus-circle me-2"></i>
-                  Add Round {currentRound}
+                  Ajouter Tour {currentRound}
                 </h6>
               </div>
               <div className="card-body">
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Round Winner</label>
+                  <label className="form-label fw-semibold">Gagnant du tour</label>
                   <div className="row g-2">
                     {players.map((player, index) => (
                       <div key={index} className="col-6">
@@ -784,7 +784,7 @@ export default function JakiPage() {
                       disabled={!gameData.roundWinner}
                     />
                     <label className="form-check-label" htmlFor="mrass-win">
-                      <span className="me-1">Win by Mrass</span>
+                      <span className="me-1">Victoir par Mrass</span>
                       <span className="text-danger">(2 points)</span>
                     </label>
                   </div>
@@ -797,7 +797,7 @@ export default function JakiPage() {
                     disabled={!gameData.roundWinner}
                   >
                     <i className="bi bi-plus-circle me-2"></i>
-                    Add Round
+                    Ajouter Tour
                   </button>
                 </div>
               </div>
@@ -820,7 +820,7 @@ export default function JakiPage() {
 
     return (
       <div className="text-center">
-        <h3 className="fw-bold text-dark mb-4">Waiting for player responses</h3>
+        <h3 className="fw-bold text-dark mb-4">En attente de la réponse des joueurs</h3>
         
         <div className="card mb-4">
           <div className="card-body">
@@ -840,14 +840,14 @@ export default function JakiPage() {
               {isWaiting ? (
                 <>
                   <i className="bi bi-clock-history me-2"></i>
-                  Waiting for {totalInvitations - acceptedInvitations} player(s) to respond...
+                  En attente de {totalInvitations - acceptedInvitations} joueur(s) à répondre ...
                   <br />
-                  <small>Players have 5 minutes to respond</small>
+                  <small>Les joueurs ont 5 minutes pour répondre</small>
                 </>
               ) : (
                 <>
                   <i className="bi bi-check-circle-fill text-success me-2"></i>
-                  All players have accepted the invitation!
+                  Tous les joueurs ont accépté l'invitation!
                 </>
               )}
             </p>
@@ -883,7 +883,7 @@ export default function JakiPage() {
             onClick={handleStartGameAfterAcceptance}
           >
             <i className="bi bi-play-circle me-2"></i>
-            Start Game
+            Commencer jeu
           </button>
         )}
 
@@ -892,7 +892,7 @@ export default function JakiPage() {
           onClick={handleCancelGame}
         >
           <i className="bi bi-x-circle me-2"></i>
-          Cancel
+          Canceller
         </button>
       </div>
     );
@@ -903,18 +903,18 @@ export default function JakiPage() {
     return (
       <div>
         <div className="text-center mb-4">
-          <h3 className="fw-bold text-dark">Jaki Game Setup</h3>
-          <p className="text-muted">Select players and game settings</p>
+          <h3 className="fw-bold text-dark">Préparation d'un jeu Jaki</h3>
+          <p className="text-muted">Sélectionner joueurs et configuer le jeu</p>
         </div>
         
         {/* Winning Score Selector */}
         <div className="card mb-4">
           <div className="card-header bg-light">
-            <h5 className="mb-0">Game Settings</h5>
+            <h5 className="mb-0">Paramètres jeu</h5>
           </div>
           <div className="card-body">
             <div className="mb-3">
-              <label className="form-label fw-semibold">Winning Score</label>
+              <label className="form-label fw-semibold">Score objectif</label>
               <select 
                 className="form-select"
                 value={gameData.winningScore}
@@ -927,7 +927,7 @@ export default function JakiPage() {
               <div className="form-text">
                 <small className="text-muted">
                   <i className="bi bi-info-circle me-1"></i>
-                  First player to reach this score wins the game
+                  Premier joueur qui atteint ce score gagne
                 </small>
               </div>
             </div>
@@ -937,7 +937,7 @@ export default function JakiPage() {
         {/* Player Selection */}
         <div className="card mb-4">
           <div className="card-header bg-light">
-            <h5 className="mb-0">Select Players</h5>
+            <h5 className="mb-0">Sélectionner joueurs</h5>
           </div>
           <div className="card-body">
             {['player1', 'player2'].map((playerKey, index) => {
@@ -945,7 +945,7 @@ export default function JakiPage() {
               
               return (
                 <div key={playerKey} className="mb-3">
-                  <label className="form-label fw-semibold">Player {index + 1}</label>
+                  <label className="form-label fw-semibold">Joueur {index + 1}</label>
                   <div className="d-flex gap-2 align-items-center">
                     {isCustomInput ? (
                       <input
@@ -961,7 +961,7 @@ export default function JakiPage() {
                         value={playersData.players[playerKey] || ''}
                         onChange={(e) => handlePlayerSelection(playerKey, e.target.value)}
                       >
-                        <option value="">Select a player</option>
+                        <option value="">Sélectionner un joueur</option>
                         {registeredUsers.map(user => (
                           <option 
                             key={user.id} 
@@ -1062,7 +1062,7 @@ export default function JakiPage() {
           </div>
           
           <div className="text-center mb-2">
-            <small className="text-muted">Game to {game.winning_score} points • {game.total_rounds} rounds</small>
+            <small className="text-muted">Jeu sur {game.winning_score} points • {game.total_rounds} Tours complétés</small>
           </div>
           
           <div className="row g-2">
@@ -1092,7 +1092,7 @@ export default function JakiPage() {
                 {player2IsWinner && (
                   <small className="text-success">
                     <i className="bi bi-trophy-fill me-1"></i>
-                    Winner
+                    Gagnant
                   </small>
                 )}
               </div>
@@ -1141,7 +1141,7 @@ export default function JakiPage() {
                         onClick={() => dispatchGame({ type: 'SET_SHOW_FORM', payload: true })}
                       >
                         <i className="bi bi-plus-circle me-2"></i>
-                        Start Game
+                        Commencer Jeu
                       </button>
                     }
                   />
@@ -1157,11 +1157,11 @@ export default function JakiPage() {
               <EmptyState
                 icon="bi-lock-fill"
                 title="Login Required"
-                description="You need to be logged in to start new Jaki games and save your progress."
+                description="Il faut se connecter pour commencer un jeu Jaki et sauvegarder les scores."
                 action={
                   <Link to="/login" className="btn btn-primary btn-lg">
                     <i className="bi bi-box-arrow-in-right me-2"></i>
-                    Log in to start games
+                    Se connecter pour commencer un jeu
                   </Link>
                 }
               />
@@ -1176,7 +1176,7 @@ export default function JakiPage() {
             actions={
               <Link to="/jaki/history" className="btn btn-outline-primary">
                 <i className="bi bi-clock-history me-1"></i>
-                View Full History
+                Voir Historique complet
               </Link>
             }
           >
@@ -1209,7 +1209,7 @@ export default function JakiPage() {
                       onClick={loadMore}
                     >
                       <i className="bi bi-arrow-down-circle me-2"></i>
-                      Load More Games
+                      Charger plus de parties
                     </button>
                   </div>
                 )}

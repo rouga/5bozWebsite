@@ -132,7 +132,7 @@ function HomePage() {
           </div>
           
           <div className="text-center mb-2">
-            <small className="text-muted">Game to {game.winning_score} points • {game.total_rounds} rounds</small>
+            <small className="text-muted">Jeu sur {game.winning_score} points • {game.total_rounds} Tours complétés</small>
           </div>
           
           <div className="row g-2">

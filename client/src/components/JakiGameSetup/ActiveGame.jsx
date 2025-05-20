@@ -99,7 +99,7 @@ const ActiveGame = ({
           <div className="mb-4">
             <div className="alert alert-info">
               <i className="bi bi-info-circle me-2"></i>
-              Game to {winningScore} points. First player to reach {winningScore} points wins!
+              Jeu sur {winningScore} points. Premier joueur qui collecte {winningScore} points gagne.
             </div>
           </div>
           

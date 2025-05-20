@@ -121,20 +121,20 @@ const JakiHistoryPage = () => {
     if (!gameData || !gameData.rounds || gameData.rounds.length === 0) {
       return (
         <div className="text-center py-3">
-          <p className="text-muted">No round details available.</p>
+          <p className="text-muted">Pas de détail de tour disponible.</p>
         </div>
       );
     }
 
     return (
       <div className="mt-3">
-        <h6 className="text-muted mb-3">Round Details</h6>
+        <h6 className="text-muted mb-3">Détail tour</h6>
         <div className="table-responsive">
           <table className="table table-sm table-bordered">
             <thead className="bg-light">
               <tr>
-                <th className="fw-semibold">Round</th>
-                <th className="fw-semibold">Winner</th>
+                <th className="fw-semibold">Tour</th>
+                <th className="fw-semibold">Gagnant</th>
                 <th className="fw-semibold">Points</th>
                 <th className="fw-semibold">Type</th>
               </tr>
@@ -163,7 +163,7 @@ const JakiHistoryPage = () => {
 
         {/* Round Win Statistics */}
         <div className="mt-4">
-          <h6 className="text-muted mb-2">Player Statistics</h6>
+          <h6 className="text-muted mb-2">Statisiques Joueur</h6>
           <div className="row g-2">
             {gameData.players.map((player, index) => {
               // Calculate stats
@@ -178,7 +178,7 @@ const JakiHistoryPage = () => {
                       <h6 className="fw-bold mb-3">
                         {player.name}
                         {player.name === game.winner && (
-                          <span className="badge bg-success ms-2">Winner</span>
+                          <span className="badge bg-success ms-2">Gagnant</span>
                         )}
                       </h6>
                       
@@ -186,19 +186,19 @@ const JakiHistoryPage = () => {
                         <div className="col-4">
                           <div className="text-center">
                             <div className="fw-bold h5 mb-0">{player.score}</div>
-                            <div className="small text-muted">Total Score</div>
+                            <div className="small text-muted">Score Total</div>
                           </div>
                         </div>
                         <div className="col-4">
                           <div className="text-center">
                             <div className="fw-bold h5 mb-0">{normalWins}</div>
-                            <div className="small text-muted">Normal Wins</div>
+                            <div className="small text-muted">Victoire normale</div>
                           </div>
                         </div>
                         <div className="col-4">
                           <div className="text-center">
                             <div className="fw-bold h5 mb-0">{mrassWins}</div>
-                            <div className="small text-muted">Mrass Wins</div>
+                            <div className="small text-muted">Victoire par Mrass</div>
                           </div>
                         </div>
                       </div>
@@ -227,8 +227,8 @@ const JakiHistoryPage = () => {
         <div className="col-12 col-lg-10">
           {/* Page Header */}
           <PageHeader
-            title="Jaki Game History"
-            subtitle="Complete record of all Jaki games"
+            title="Historique des parties Jaki"
+            subtitle="Rapport complet de toutes les parties Jaki"
             icon="🎲"
           />
 
@@ -271,7 +271,7 @@ const JakiHistoryPage = () => {
                         </div>
                         
                         <div className="text-center mb-2">
-                          <small className="text-muted">Game to {game.winning_score} points • {game.total_rounds} rounds</small>
+                          <small className="text-muted">Jeu sur {game.winning_score} points • {game.total_rounds} Tours complétés</small>
                         </div>
                         
                         <div className="row g-2 mb-3">
@@ -284,7 +284,7 @@ const JakiHistoryPage = () => {
                               {player1IsWinner && (
                                 <small className="text-success">
                                   <i className="bi bi-trophy-fill me-1"></i>
-                                  Winner
+                                  Gagnant
                                 </small>
                               )}
                             </div>
@@ -301,7 +301,7 @@ const JakiHistoryPage = () => {
                               {player2IsWinner && (
                                 <small className="text-success">
                                   <i className="bi bi-trophy-fill me-1"></i>
-                                  Winner
+                                  Gagnant
                                 </small>
                               )}
                             </div>
@@ -316,12 +316,12 @@ const JakiHistoryPage = () => {
                             {isExpanded ? (
                               <>
                                 <i className="bi bi-chevron-up me-1"></i>
-                                Hide Details
+                                Cacher Details
                               </>
                             ) : (
                               <>
                                 <i className="bi bi-chevron-down me-1"></i>
-                                Show Details
+                                Montrer Details
                               </>
                             )}
                           </button>
@@ -343,7 +343,7 @@ const JakiHistoryPage = () => {
           
           {/* Loading Spinner */}
           {loading && (
-            <LoadingSpinner text="Loading games..." className="my-4" />
+            <LoadingSpinner text="Chargement des parties..." className="my-4" />
           )}
           
           {/* Load More Button */}
@@ -354,7 +354,7 @@ const JakiHistoryPage = () => {
                 onClick={loadMore}
               >
                 <i className="bi bi-arrow-down-circle me-2"></i>
-                Load More Games
+                Charger plus de parties
               </button>
             </div>
           )}
