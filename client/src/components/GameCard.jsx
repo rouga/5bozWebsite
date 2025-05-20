@@ -88,6 +88,19 @@ const GameCard = ({ game }) => {
     return false;
   };
 
+  // New helper function to check if a player is Mgagi
+  const isMgagiPlayer = (playerName, gameData) => {
+    if (!gameData || !playerName || gameData.type !== 'chkan') return false;
+    
+    // Look for the player in the players array
+    if (gameData.players) {
+      const player = gameData.players.find(p => p.name === playerName);
+      return player && player.isMgagi === true;
+    }
+    
+    return false;
+  };
+
   if (game.type === 'chkan') {
     // Parse player scores
     const playerScores = game.player_scores ? game.player_scores.split(', ') : [];
@@ -99,7 +112,7 @@ const GameCard = ({ game }) => {
       };
     });
     
-    // Parse game data to check for authenticated players
+    // Parse game data to check for authenticated players and Mgagi
     let gameData = null;
     try {
       gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
@@ -107,11 +120,28 @@ const GameCard = ({ game }) => {
       console.error('Error parsing game data:', e);
     }
     
+    // Check if there's a Mgagi player who lost
+    let mgagiLoser = null;
+    if (gameData && gameData.players) {
+      // First find Mgagi player(s)
+      const mgagiPlayers = gameData.players.filter(p => p.isMgagi);
+      if (mgagiPlayers.length > 0) {
+        // Check if any Mgagi player has score ≥ 701
+        for (const mgagiPlayer of mgagiPlayers) {
+          const playerScore = players.find(p => p.name === mgagiPlayer.name)?.score || 0;
+          if (playerScore >= 701) {
+            mgagiLoser = mgagiPlayer.name;
+            break;
+          }
+        }
+      }
+    }
+    
     // Sort players by score (lowest first)
     players.sort((a, b) => a.score - b.score);
     
-    // Determine winners (below 701)
-    const winners = players.filter(p => p.score < 701);
+    // If there's a Mgagi loser, they're the only loser
+    const winners = mgagiLoser ? players.filter(p => p.name !== mgagiLoser && p.score < 701) : players.filter(p => p.score < 701);
     const hasWinners = winners.length > 0;
     const duration = calculateDuration();
     
@@ -140,8 +170,10 @@ const GameCard = ({ game }) => {
           {/* Player scores grid */}
           <div className="row g-2 mb-3">
             {players.map((player, index) => {
+              const isMgagi = isMgagiPlayer(player.name, gameData);
+              // If we have a Mgagi loser, they're the only loser
+              const isLoser = mgagiLoser ? player.name === mgagiLoser : hasWinners && player.score >= 701;
               const isWinner = hasWinners ? player.score < 701 : index === 0;
-              const isLoser = hasWinners && player.score >= 701;
               const isAuthenticated = isAuthenticatedPlayer(player.name, gameData);
               
               return (
@@ -162,6 +194,9 @@ const GameCard = ({ game }) => {
                         <i className="bi bi-check-circle-fill text-success" 
                            title="Authenticated user" 
                            style={{ fontSize: '0.8rem' }}></i>
+                      )}
+                      {isMgagi && (
+                        <span className="badge bg-warning ms-1" style={{ fontSize: '0.65rem' }}>Mgagi</span>
                       )}
                     </div>
                     <div className={`h6 mb-0 ${
