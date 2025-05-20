@@ -1,10 +1,11 @@
-// Updated App.jsx with Global Invitation Handler
+// Updated App.jsx with Jaki Game Routes
 import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import HomePage from './../pages/HomePage';
 import RamiPage from '../pages/RamiPage';
 import RamiHistoryPage from '../pages/RamiHistoryPage';
 import JakiPage from '../pages/JakiPage';
+import JakiHistoryPage from '../pages/JakiHistoryPage';
 import LudoPage from '../pages/LudoPage';
 import SignupPage from '../pages/SignupPage';
 import LoginPage from '../pages/LoginPage';
@@ -12,7 +13,7 @@ import ProfilePage from '../pages/ProfilePage';
 import useAuth from './hooks/useAuth';
 import useSocket from './hooks/useSocket';
 import { InvitationNotificationBadge } from './components';
-import GlobalInvitationHandler from './components/GlobalInvitationHandler'; // Add this import
+import GlobalInvitationHandler from './components/GlobalInvitationHandler';
 
 function App() {
   const [user, setUser, refreshUser] = useAuth();
@@ -66,7 +67,7 @@ function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {/* Global Invitation Handler - Add this */}
+      {/* Global Invitation Handler */}
       <GlobalInvitationHandler />
       
       <div className="container">
@@ -96,8 +97,9 @@ function App() {
                 </NavLink>
               </li>
               <li className="nav-item fw-semibold fs-5 me-1">
-                <NavLink onClick={handleNavItemClick} to="/jaki" className={({ isActive }) => `nav-link d-inline-flex align-items-center title-color ${isActive ? 'text-primary ' : ''}`}>
+                <NavLink onClick={handleNavItemClick} to="/jaki" className={({ isActive }) => `nav-link d-inline-flex align-items-center title-color position-relative ${isActive ? 'text-primary ' : ''}`}>
                   <span className="me-1">🎲</span> Jaki
+                  <InvitationNotificationBadge />
                 </NavLink>
               </li>
               <li className="nav-item fw-semibold fs-5 me-1">
@@ -169,6 +171,7 @@ function App() {
           <Route path="/rami" element={<RamiPage />} />
           <Route path="/rami/history" element={<RamiHistoryPage />} />
           <Route path="/jaki" element={<JakiPage />} />
+          <Route path="/jaki/history" element={<JakiHistoryPage />} />
           <Route path="/ludo" element={<LudoPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/login" element={<LoginPage refreshUser={refreshUser} />} />
@@ -184,5 +187,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

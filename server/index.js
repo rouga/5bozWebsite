@@ -1,4 +1,4 @@
-// Fixed server/index.js - Remove duplicate endpoint and fix invitation handling
+// server/index.js - Updated to include Jaki routes
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -40,6 +40,9 @@ const { io, userSockets } = initializeSocket(server);
 // Make io and userSockets available to routes
 app.locals.io = io;
 app.locals.userSockets = userSockets;
+
+// Import Jaki routes
+const jakiRoutes = require('./routes/jaki');
 
 // SINGLE game invitation endpoint with proper debugging
 app.post('/api/game-invitations', async (req, res) => {
@@ -629,5 +632,8 @@ app.post('/api/logout', (req, res) => {
     res.json({ message: 'Logout successful' });
   });
 });
+
+// Use the Jaki routes
+app.use('/api/jaki', jakiRoutes);
 
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

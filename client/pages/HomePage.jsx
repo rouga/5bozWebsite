@@ -4,14 +4,16 @@ import { GameCard, PageHeader, SectionCard, EmptyState, LiveScoresCard } from '.
 import { gameAPI } from '../src/utils/api';
 
 function HomePage() {
-  const [scores, setScores] = useState([]);
+  const [ramiScores, setRamiScores] = useState([]);
+  const [jakiScores, setJakiScores] = useState([]);
   const [activeGames, setActiveGames] = useState([]);
   const [loadingActiveGames, setLoadingActiveGames] = useState(true);
   const [activeGamesError, setActiveGamesError] = useState(null);
   const [activeTab, setActiveTab] = useState('rami');
 
   useEffect(() => {
-    fetchScores();
+    fetchRamiScores();
+    fetchJakiScores();
     fetchActiveGames();
     
     // Set up polling for active games (refresh every 30 seconds)
@@ -20,15 +22,27 @@ function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchScores = async () => {
+  const fetchRamiScores = async () => {
     try {
       const res = await fetch('http://192.168.0.12:5000/api/scores');
       if (res.ok) {
         const data = await res.json();
-        setScores(data);
+        setRamiScores(data);
       }
     } catch (error) {
-      console.error('Error fetching scores:', error);
+      console.error('Error fetching Rami scores:', error);
+    }
+  };
+
+  const fetchJakiScores = async () => {
+    try {
+      const res = await fetch('http://192.168.0.12:5000/api/jaki/games');
+      if (res.ok) {
+        const data = await res.json();
+        setJakiScores(data);
+      }
+    } catch (error) {
+      console.error('Error fetching Jaki scores:', error);
     }
   };
 
@@ -36,8 +50,31 @@ function HomePage() {
     try {
       setLoadingActiveGames(true);
       setActiveGamesError(null);
-      const data = await gameAPI.getActiveGames();
-      setActiveGames(data);
+      
+      // Fetch all active games from both Rami and Jaki
+      const [ramiGamesResponse, jakiGamesResponse] = await Promise.all([
+        fetch('http://192.168.0.12:5000/api/active-games', { credentials: 'include' }),
+        fetch('http://192.168.0.12:5000/api/jaki/active-games', { credentials: 'include' })
+      ]);
+      
+      if (!ramiGamesResponse.ok) {
+        throw new Error('Failed to load Rami active games');
+      }
+      
+      if (!jakiGamesResponse.ok) {
+        throw new Error('Failed to load Jaki active games');
+      }
+      
+      const ramiGames = await ramiGamesResponse.json();
+      const jakiGames = await jakiGamesResponse.json();
+      
+      // Combine all active games
+      const allGames = [...ramiGames, ...jakiGames];
+      
+      // Sort by updated time to show most recent first
+      allGames.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      
+      setActiveGames(allGames);
     } catch (error) {
       console.error('Error fetching active games:', error);
       setActiveGamesError('Failed to load active games');
@@ -46,8 +83,9 @@ function HomePage() {
     }
   };
 
-  // Get only the 5 most recent scores
-  const latestScores = scores.slice(0, 5);
+  // Get only the most recent scores for each game type
+  const latestRamiScores = ramiScores.slice(0, 5);
+  const latestJakiScores = jakiScores.slice(0, 5);
 
   const renderTabButton = (id, icon, label, active, disabled = false) => (
     <>
@@ -71,6 +109,69 @@ function HomePage() {
       </label>
     </>
   );
+
+  // Render a Jaki game card
+  const renderJakiGameCard = (game) => {
+    const player1IsWinner = game.winner === game.player1;
+    const player2IsWinner = game.winner === game.player2;
+    
+    return (
+      <div className="card border-0 shadow-sm h-100">
+        <div className="card-body p-3">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span className="badge bg-warning rounded-pill">🎲 Jaki</span>
+            <div className="text-end">
+              <small className="text-muted d-block">
+                {new Date(game.played_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </small>
+            </div>
+          </div>
+          
+          <div className="text-center mb-2">
+            <small className="text-muted">Game to {game.winning_score} points • {game.total_rounds} rounds</small>
+          </div>
+          
+          <div className="row g-2">
+            <div className="col-5">
+              <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                <div className="fw-semibold small">{game.player1}</div>
+                <div className={`h5 mb-0 ${player1IsWinner ? 'text-success' : 'text-primary'}`}>
+                  {game.score1}
+                </div>
+                {player1IsWinner && (
+                  <small className="text-success">
+                    <i className="bi bi-trophy-fill me-1"></i>
+                    Winner
+                  </small>
+                )}
+              </div>
+            </div>
+            <div className="col-2 d-flex align-items-center justify-content-center">
+              <span className="text-muted fw-medium">VS</span>
+            </div>
+            <div className="col-5">
+              <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                <div className="fw-semibold small">{game.player2}</div>
+                <div className={`h5 mb-0 ${player2IsWinner ? 'text-success' : 'text-primary'}`}>
+                  {game.score2}
+                </div>
+                {player2IsWinner && (
+                  <small className="text-success">
+                    <i className="bi bi-trophy-fill me-1"></i>
+                    Winner
+                  </small>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="container-fluid px-3 mt-2">
@@ -107,14 +208,14 @@ function HomePage() {
             actions={
               <div className="btn-group" role="group" aria-label="Game tabs">
                 {renderTabButton('ramiOption', '♠️', 'Rami', activeTab === 'rami')}
-                {renderTabButton('jakiOption', '🎲', 'Jaki', activeTab === 'jaki', true)}
+                {renderTabButton('jakiOption', '🎲', 'Jaki', activeTab === 'jaki')}
                 {renderTabButton('ludoOption', '/ludo.png', 'Ludo', activeTab === 'ludo', true)}
               </div>
             }
           >
             {activeTab === 'rami' && (
               <div>
-                {latestScores.length === 0 ? (
+                {latestRamiScores.length === 0 ? (
                   <EmptyState
                     icon="bi-dice-1"
                     title="Aucun jeu enregistré"
@@ -129,7 +230,7 @@ function HomePage() {
                 ) : (
                   <>
                     <div className="row g-3">
-                      {latestScores.map(game => (
+                      {latestRamiScores.map(game => (
                         <div key={game.id} className="col-12 col-md-6 col-lg-4">
                           <GameCard game={game} />
                         </div>
@@ -151,11 +252,41 @@ function HomePage() {
             )}
             
             {activeTab === 'jaki' && (
-              <EmptyState
-                icon="🎲"
-                title="Jaki bientôt disponible!"
-                description="Cette section sera ajoutée prochainement."
-              />
+              <div>
+                {latestJakiScores.length === 0 ? (
+                  <EmptyState
+                    icon="bi-dice-1"
+                    title="Aucun jeu enregistré"
+                    description="Commencez à jouer pour voir vos parties ici!"
+                    action={
+                      <Link to="/jaki" className="btn btn-primary">
+                        <span className="me-2">🎲</span>
+                        Commencer une partie
+                      </Link>
+                    }
+                  />
+                ) : (
+                  <>
+                    <div className="row g-3">
+                      {latestJakiScores.map(game => (
+                        <div key={game.id} className="col-12 col-md-6 col-lg-4">
+                          {renderJakiGameCard(game)}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="text-center mt-4">
+                      <Link 
+                        to="/jaki/history" 
+                        className="btn btn-outline-primary btn-lg"
+                      >
+                        <i className="bi bi-clock-history me-2"></i>
+                        Voir tout l'historique
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
             
             {activeTab === 'ludo' && (
