@@ -391,7 +391,7 @@ export default function JakiPage() {
     
     // Check for duplicate players
     if (playersData.players.player1.toLowerCase() === playersData.players.player2.toLowerCase()) {
-      showError('Players must be different');
+      showError('Les joueurs doivent etre différents');
       return;
     }
     
@@ -1110,7 +1110,7 @@ export default function JakiPage() {
           {/* Main Header */}
           <PageHeader
             title="Section Jaki"
-            subtitle="Create and track Jaki games between players"
+            subtitle="Créer et suivre les parties Jaki entre 5boz"
             icon="🎲"
             gradient={true}
           />
@@ -1122,8 +1122,8 @@ export default function JakiPage() {
 
           {/* Game Section */}
           <SectionCard
-            title="Game Management"
-            subtitle="Create new games or continue saved games"
+            title="Gestion des parties"
+            subtitle="Créer une nouvelle partie ou continuer une partie en cours"
             icon="bi-controller"
           >
             {user ? (

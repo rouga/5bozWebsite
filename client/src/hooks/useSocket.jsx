@@ -38,12 +38,10 @@ export default function useSocket() {
           socketRef.current.on('connect', () => {
             setIsConnected(true);
             socketRef.current.emit('user_login', user.id);
-            console.log('Socket connected, user login sent:', user.id);
           });
 
           socketRef.current.on('disconnect', (reason) => {
             setIsConnected(false);
-            console.log('Socket disconnected:', reason);
           });
 
           // Handle connection errors with backoff

@@ -17,7 +17,6 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
       
       // Only auto-close when invitation expires
       if (remaining <= 0) {
-        console.log('GameInvitationModal: Invitation expired, closing modal');
         onClose();
       }
     };
@@ -30,10 +29,8 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
   }, [invitation, show, onClose]);
 
   const handleResponse = async (response) => {
-    console.log('GameInvitationModal: Handling response:', response);
     
     if (responding) {
-      console.log('Already responding, ignoring duplicate');
       return;
     }
     
@@ -41,10 +38,8 @@ const GameInvitationModal = ({ invitation, onRespond, onClose, show }) => {
     
     try {
       await onRespond(invitation.invitationId, response);
-      console.log('GameInvitationModal: Response sent successfully');
       // Don't setResponding(false) here - let the parent handle modal closure
     } catch (error) {
-      console.error('GameInvitationModal: Error sending response:', error);
       setResponding(false);
     }
   };

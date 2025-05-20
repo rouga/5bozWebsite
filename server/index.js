@@ -49,23 +49,14 @@ app.post('/api/game-invitations', async (req, res) => {
   const userId = req.session.userId;
   const { gameType, players, gameId } = req.body;
 
-  console.log('=== INVITATION DEBUG START ===');
-  console.log('User ID:', userId);
-  console.log('Game Type:', gameType);
-  console.log('Players:', JSON.stringify(players, null, 2));
-  console.log('Game ID:', gameId);
-
   if (!userId) {
-    console.log('ERROR: User not logged in');
     return res.status(401).json({ error: 'Must be logged in to send invitations' });
   }
 
   try {
     const invitations = [];
-    console.log('Processing players for invitations...');
     
     for (const [index, player] of players.entries()) {
-      console.log(`\nProcessing player ${index + 1}:`, player);
       
       if (player.isRegistered) {
         // Get user ID from username
@@ -76,11 +67,9 @@ app.post('/api/game-invitations', async (req, res) => {
 
         if (userResult.rows.length > 0) {
           const invitedUserId = userResult.rows[0].id;
-          console.log(`Found user ID ${invitedUserId} for username ${player.username}`);
           
           // Skip if inviting yourself
           if (invitedUserId === userId) {
-            console.log(`Skipping self-invitation for user ${invitedUserId}`);
             continue;
           }
 
@@ -103,11 +92,9 @@ app.post('/api/game-invitations', async (req, res) => {
 
           const invitation = inviteResult.rows[0];
           invitations.push(invitation);
-          console.log(`Created invitation with ID ${invitation.id}`);
 
           // Check if user is connected via socket
           const invitedSocketId = userSockets.get(invitedUserId);
-          console.log(`Socket lookup for user ${invitedUserId}:`, invitedSocketId || 'NOT CONNECTED');
           
           if (invitedSocketId) {
             // Get inviter username
@@ -124,25 +111,15 @@ app.post('/api/game-invitations', async (req, res) => {
               expiresAt: invitation.expires_at
             };
             
-            console.log(`Sending socket event to ${invitedSocketId}:`, invitationData);
-            
             // Send real-time notification to the invited user
             io.to(invitedSocketId).emit('game_invitation', invitationData);
-            console.log(`✅ Socket event sent to user ${invitedUserId}`);
           } else {
-            console.log(`❌ User ${invitedUserId} not connected via socket`);
           }
         } else {
-          console.log(`❌ User not found for username: ${player.username}`);
         }
       } else {
-        console.log(`Skipping non-registered player: ${player.username}`);
       }
     }
-
-    console.log(`\nTotal invitations created: ${invitations.length}`);
-    console.log('Current connected users:', Array.from(userSockets.keys()));
-    console.log('=== INVITATION DEBUG END ===\n');
 
     res.json({
       success: true,
@@ -157,8 +134,6 @@ app.post('/api/game-invitations', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error sending game invitations:', error);
-    console.log('=== INVITATION DEBUG END (ERROR) ===\n');
     res.status(500).json({ error: 'Failed to send invitations' });
   }
 });
@@ -391,7 +366,6 @@ app.post('/api/scores', async (req, res) => {
   const gameData = req.body;
   
   try {
-    console.log('Received game data:', JSON.stringify(gameData, null, 2)); // Debug log
     
     if (gameData.type === 'chkan') {
       // Handle Chkan game - don't use team1/team2/score1/score2 columns
@@ -415,16 +389,12 @@ app.post('/api/scores', async (req, res) => {
       // Use current UTC time for played_at to match created_at format
       const playedAt = new Date().toISOString();
       
-      console.log('Using created_at:', gameCreatedAt);
-      console.log('Using played_at:', playedAt);
-      
       const result = await pool.query(
         `INSERT INTO games (type, winners, losers, player_scores, game_data, created_at, played_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
         ['chkan', winners, losers || '', player_scores, JSON.stringify(game_data), gameCreatedAt, playedAt]
       );
       
-      console.log('Chkan game saved successfully:', result.rows[0]);
       res.json(result.rows[0]);
     } else {
       // Handle S7ab game (use existing team1/team2/score1/score2 columns for backward compatibility)
@@ -448,8 +418,6 @@ app.post('/api/scores', async (req, res) => {
       // Use current UTC time for played_at to match created_at format
       const playedAt = new Date().toISOString();
       
-      console.log('Using created_at:', gameCreatedAt);
-      console.log('Using played_at:', playedAt);
       
       const result = await pool.query(
         `INSERT INTO games (type, team1, team2, score1, score2, game_data, created_at, played_at) 
@@ -457,11 +425,9 @@ app.post('/api/scores', async (req, res) => {
         ['s7ab', team1, team2, score1, score2, JSON.stringify(game_data), gameCreatedAt, playedAt]
       );
       
-      console.log('S7ab game saved successfully:', result.rows[0]);
       res.json(result.rows[0]);
     }
   } catch (err) {
-    console.error('Error saving game:', err);
     res.status(500).json({ error: 'Failed to save game: ' + err.message });
   }
 });
@@ -610,7 +576,6 @@ app.post('/api/change-password', async (req, res) => {
 });
 
 app.get('/api/me', async (req, res) => {
-  console.log(req.session.userId);
   if (!req.session.userId) return res.json({ loggedIn: false });
 
   const user = await pool.query('SELECT username FROM users WHERE id = $1', [req.session.userId]);
@@ -628,7 +593,6 @@ app.post('/api/logout', (req, res) => {
       httpOnly: true,
       secure: false, // true in production over HTTPS
     });
-    console.log("Logout successful");
     res.json({ message: 'Logout successful' });
   });
 });

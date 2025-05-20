@@ -17,7 +17,6 @@ const GlobalInvitationHandler = () => {
     if (!user || isResponding || !socket) return;
 
     try {
-      console.log('Fetching pending invitations...');
       const response = await fetch('http://192.168.0.12:5000/api/my-invitations', {
         credentials: 'include'
       });
@@ -81,7 +80,6 @@ const GlobalInvitationHandler = () => {
         const audio = new Audio('/notification-sound.mp3');
         audio.play().catch(e => console.log('Could not play notification sound:', e));
       } catch (error) {
-        console.log('Audio not supported');
       }
       
       // Browser notification as backup

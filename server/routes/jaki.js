@@ -56,14 +56,12 @@ router.post('/games', isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
   
   try {
-    console.log('Received Jaki game data:', JSON.stringify(gameData, null, 2)); // Debug log
     
     // Ensure all required fields are present
     if (!gameData.player1 || !gameData.player2 || 
         gameData.score1 === undefined || gameData.score2 === undefined || 
         !gameData.winner || !gameData.winning_score || 
         gameData.total_rounds === undefined || !gameData.game_data) {
-      console.error('Missing required fields for Jaki game:', gameData);
       return res.status(400).json({ error: 'Missing required fields for Jaki game' });
     }
     
@@ -78,9 +76,7 @@ router.post('/games', isAuthenticated, async (req, res) => {
     
     // Use current UTC time for played_at to match created_at format
     const playedAt = new Date().toISOString();
-    
-    console.log('Using created_at:', gameCreatedAt);
-    console.log('Using played_at:', playedAt);
+
     
     const result = await pool.query(
       `INSERT INTO jaki_games (
@@ -102,10 +98,8 @@ router.post('/games', isAuthenticated, async (req, res) => {
       ]
     );
     
-    console.log('Jaki game saved successfully:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('Error saving Jaki game:', err);
     res.status(500).json({ error: 'Failed to save game: ' + err.message });
   }
 });

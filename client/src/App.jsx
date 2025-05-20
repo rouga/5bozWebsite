@@ -44,16 +44,13 @@ function App() {
         setUser(false); // Clear session
         navigate('/'); // Redirect to home page
       } else {
-        console.error('Logout failed:', data.error);
       }
     } catch (err) {
-      console.error('Logout failed:', err);
     }
   };
 
   // Debug user state changes
   useEffect(() => {
-    console.log("Auth state updated:", user);
   }, [user]);
 
   // Render loading state while authentication is being checked

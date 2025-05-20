@@ -29,8 +29,6 @@ export default function LoginPage({ refreshUser }) {
       const userData = await authAPI.getMe();
       
       if (userData.loggedIn) {
-        console.log("User logged in:", userData);
-        
         // Update user state with the logged-in user data
         setUser({ 
           id: userData.userId, 
