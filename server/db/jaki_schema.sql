@@ -55,6 +55,10 @@ ALTER TABLE IF EXISTS public.active_jaki_games
     OWNER to postgres;
 
 
+-- Table: public.game_invitations
+
+-- DROP TABLE IF EXISTS public.game_invitations;
+
 CREATE TABLE IF NOT EXISTS public.game_invitations
 (
     id integer NOT NULL DEFAULT nextval('game_invitations_id_seq'::regclass),
@@ -77,8 +81,8 @@ CREATE TABLE IF NOT EXISTS public.game_invitations
         REFERENCES public.users (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION,
-    CONSTRAINT game_invitations_game_type_check CHECK (game_type::text = ANY (ARRAY['chkan'::character varying, 's7ab'::character varying]::text[])),
-    CONSTRAINT game_invitations_status_check CHECK (status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'expired'::character varying]::text[]))
+    CONSTRAINT game_invitations_status_check CHECK (status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'expired'::character varying]::text[])),
+    CONSTRAINT game_invitations_game_type_check CHECK (game_type::text = ANY (ARRAY['chkan'::character varying::text, 's7ab'::character varying::text, 'jaki'::character varying::text]))
 )
 
 TABLESPACE pg_default;

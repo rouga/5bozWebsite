@@ -158,6 +158,7 @@ export default function JakiPage() {
     if (!socket) return;
 
     const handleInvitationResponse = (data) => {
+      console.log("Received invitation response:", data);
       if (data.gameId === gameData.currentGameId) {
         dispatchGame({
           type: 'SET_PLAYER_ACCEPTANCE_STATUS', 
@@ -307,62 +308,83 @@ export default function JakiPage() {
     const gameId = `jaki-game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     dispatchGame({ type: 'SET_CURRENT_GAME_ID', payload: gameId });
     
-    // Determine which players are registered
-    const playersWithRegistrationStatus = selectedPlayers.map((player, index) => {
+    // Format players for invitation properly
+    const formattedPlayers = selectedPlayers.map((player, index) => {
       const isRegistered = registeredUsers.some(u => u.username.toLowerCase() === player.username.toLowerCase());
-      const teamSlot = `player${index + 1}`;
-      
       return {
-        ...player,
+        username: player.username,
         isRegistered,
-        teamSlot
+        teamSlot: `player${index + 1}`
       };
     });
     
     try {
+      console.log("Sending invitations with data:", {
+        gameType: 'jaki',
+        players: formattedPlayers,
+        gameId
+      });
+      
       const response = await fetch('http://192.168.0.12:5000/api/game-invitations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           gameType: 'jaki',
-          players: playersWithRegistrationStatus,
+          players: formattedPlayers,
           gameId
         })
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Initialize acceptance status for registered players
-        const initialStatus = {};
-        playersWithRegistrationStatus.forEach(player => {
-          if (player.isRegistered && player.username !== user?.username) {
-            initialStatus[player.teamSlot] = false;
-          } else if (!player.isRegistered || player.username === user?.username) {
-            // Non-registered players and self are automatically "accepted"
-            initialStatus[player.teamSlot] = true;
-          }
-        });
-        
-        dispatchGame({ type: 'SET_PLAYER_ACCEPTANCE_STATUS', payload: initialStatus });
-        
-        if (data.invitationsSent > 0) {
-          showSuccess(`Invitations sent to ${data.invitationsSent} player(s). Waiting for responses...`);
-        } else {
-          // No invitations needed, can start immediately
-          dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: true });
-        }
-        
-        return gameId;
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("Error parsing JSON response:", jsonError);
+        data = { error: "Failed to parse server response" };
       }
+      
+      if (!response.ok) {
+        console.error("Server returned an error:", response.status, data);
+        throw new Error(`Failed to send invitations: ${data.error || response.statusText}`);
+      }
+      
+      console.log("Invitation response:", data);
+      
+      // Handle case where response is ok but data indicates failure
+      if (data.error) {
+        throw new Error(`Server error: ${data.error}`);
+      }
+      
+      // Initialize acceptance status for registered players
+      const initialStatus = {};
+      formattedPlayers.forEach(player => {
+        if (player.isRegistered && player.username !== user?.username) {
+          initialStatus[player.teamSlot] = false;
+        } else if (!player.isRegistered || player.username === user?.username) {
+          // Non-registered players and self are automatically "accepted"
+          initialStatus[player.teamSlot] = true;
+        }
+      });
+      
+      dispatchGame({ type: 'SET_PLAYER_ACCEPTANCE_STATUS', payload: initialStatus });
+      
+      if (data.invitationsSent > 0) {
+        showSuccess(`Invitations sent to ${data.invitationsSent} player(s). Waiting for responses...`);
+      } else {
+        // No invitations needed, can start immediately
+        dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: true });
+      }
+      
+      return gameId;
     } catch (error) {
       console.error('Error sending invitations:', error);
-      showError('Failed to send game invitations');
+      showError(`Failed to send game invitations: ${error.message || "Unknown error"}`);
+      // Reset the game state to remove the current game ID
+      dispatchGame({ type: 'RESET_GAME' });
+      return null;
     }
-    
-    return null;
-  };
+};
 
   // Event handlers
   const handleWinningScoreChange = (score) => {
@@ -395,6 +417,12 @@ export default function JakiPage() {
       return;
     }
     
+    // Check if user is logged in
+    if (!user || !user.id) {
+      showError('You must be logged in to send invitations');
+      return;
+    }
+    
     // Format players for invitation
     const selectedPlayers = [
       { username: playersData.players.player1 },
@@ -402,11 +430,16 @@ export default function JakiPage() {
     ];
     
     // Send invitations
-    const gameId = await sendGameInvitations(selectedPlayers);
-    if (!gameId) return;
-    
-    dispatchGame({ type: 'SET_SHOW_FORM', payload: true });
-  };
+    setLoading(true);
+    try {
+      const gameId = await sendGameInvitations(selectedPlayers);
+      if (gameId) {
+        dispatchGame({ type: 'SET_SHOW_FORM', payload: true });
+      }
+    } finally {
+      setLoading(false);
+    }
+};
 
   const handleStartGameAfterAcceptance = () => {
     const player1 = playersData.players.player1;
@@ -458,6 +491,10 @@ export default function JakiPage() {
     });
     
     // Update player rounds data
+    if (!updatedState.players[winnerIndex].rounds) {
+      updatedState.players[winnerIndex].rounds = [];
+    }
+    
     updatedState.players[winnerIndex].rounds.push({
       roundNumber: updatedState.currentRound,
       points: pointsToAdd,
@@ -589,222 +626,45 @@ export default function JakiPage() {
     setPage(prev => prev + 1);
   };
 
+  // Calculate game duration
+  const calculateDuration = (startTime, currentTime) => {
+    if (!startTime) return '';
+    
+    const start = new Date(startTime);
+    const now = currentTime || new Date();
+    const diffMs = now - start;
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   // Render active game component
   const renderActiveGame = () => {
-    if (!gameData.gameState) return null;
-    
-    const { players, winningScore, currentRound } = gameData.gameState;
-    const completedRounds = currentRound - 1;
-    const duration = calculateDuration(gameData.gameCreatedAt, gameTime);
-    
     return (
-      <div className="card border-primary mb-4">
-        <div className="card-header bg-primary text-white">
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h5 className="mb-1">🎲 Jaki Game</h5>
-              <div className="small">
-                <span className="me-3">
-                  <i className="bi bi-arrow-repeat me-1"></i>
-                  Round {currentRound}
-                  {completedRounds > 0 && (
-                    <span className="ms-1">({completedRounds} completed)</span>
-                  )}
-                </span>
-                {duration && (
-                  <span>
-                    <i className="bi bi-clock me-1"></i>
-                    Duration: {duration}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="d-flex gap-2">
-              <button 
-                className="btn btn-sm btn-outline-light"
-                onClick={handleCancelGame}
-              >
-                <i className="bi bi-x-circle me-1"></i>
-                Canceller
-              </button>
-              <button 
-                className="btn btn-sm btn-light"
-                onClick={() => handleFinishGame()}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-1"></span>
-                    Finishing...
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-check-circle me-1"></i>
-                    Finir la partie.
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="card-body">
-          <div className="mb-4">
-            <div className="alert alert-info">
-              <i className="bi bi-info-circle me-2"></i>
-             Jeu sur {winningScore} points. Premier joueur qui collecte {winningScore} points gagne.
-            </div>
-          </div>
-          
-          {/* Current Standings */}
-          <div className="row g-3 mb-4">
-            {players.map((player, index) => (
-              <div key={index} className="col-6">
-                <div className={`card h-100 ${player.score >= winningScore ? 'border-success' : 'border-0 shadow-sm'}`}>
-                  <div className={`card-header ${player.score >= winningScore ? 'bg-success text-white' : 'bg-light'}`}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <h5 className="mb-0">{player.name}</h5>
-                      {player.score >= winningScore && (
-                        <span className="badge bg-warning text-dark">
-                          <i className="bi bi-trophy-fill me-1"></i>
-                          Gagnant
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="card-body text-center">
-                    <div className={`display-4 fw-bold ${player.score >= winningScore ? 'text-success' : 'text-primary'}`}>
-                      {player.score}
-                    </div>
-                    <div className="text-muted">points</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Round Details */}
-          {completedRounds > 0 && (
-            <div className="card mb-4">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">Historique des tours</h6>
-                <button
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={handleToggleRoundDetails}
-                >
-                  {gameData.showRoundDetails ? (
-                    <>
-                      <i className="bi bi-chevron-up me-1"></i>
-                      Cacher Details
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-chevron-down me-1"></i>
-                      Montrer  Details
-                    </>
-                  )}
-                </button>
-              </div>
-              
-              {gameData.showRoundDetails && (
-                <div className="card-body">
-                  <div className="table-responsive">
-                    <table className="table table-sm table-bordered">
-                      <thead className="bg-light">
-                        <tr>
-                          <th>Tour</th>
-                          <th>Gagnant</th>
-                          <th>Points</th>
-                          <th>Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {gameData.gameState.rounds.map((round, index) => (
-                          <tr key={index}>
-                            <td>{round.roundNumber}</td>
-                            <td>{round.winner}</td>
-                            <td>{round.points}</td>
-                            <td>
-                              {round.isMrass ? (
-                                <span className="badge bg-danger">
-                                  <i className="bi bi-hand-index-thumb me-1"></i>
-                                  Mrass
-                                </span>
-                              ) : (
-                                <span className="badge bg-primary">Normal</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Add Round Form */}
-          {!gameData.gameState.completed && (
-            <div className="card">
-              <div className="card-header">
-                <h6 className="mb-0">
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Ajouter Tour {currentRound}
-                </h6>
-              </div>
-              <div className="card-body">
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">Gagnant du tour</label>
-                  <div className="row g-2">
-                    {players.map((player, index) => (
-                      <div key={index} className="col-6">
-                        <div
-                          className={`card text-center ${gameData.roundWinner === player.name ? 'border-success' : 'border'} cursor-pointer`}
-                          onClick={() => handleSetRoundWinner(player.name)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div className="card-body py-3">
-                            <div className="fw-bold">{player.name}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <div className="form-check">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="mrass-win"
-                      checked={gameData.isMrassWin}
-                      onChange={handleToggleMrassWin}
-                      disabled={!gameData.roundWinner}
-                    />
-                    <label className="form-check-label" htmlFor="mrass-win">
-                      <span className="me-1">Victoir par Mrass</span>
-                      <span className="text-danger">(2 points)</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="text-center">
-                  <button
-                    className="btn btn-primary btn-lg px-4"
-                    onClick={handleAddRound}
-                    disabled={!gameData.roundWinner}
-                  >
-                    <i className="bi bi-plus-circle me-2"></i>
-                    Ajouter Tour
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <ActiveGame
+        gameState={gameData.gameState}
+        roundWinner={gameData.roundWinner}
+        isMrassWin={gameData.isMrassWin}
+        showRoundDetails={gameData.showRoundDetails}
+        gameCreatedAt={gameData.gameCreatedAt}
+        gameTime={gameTime}
+        onRoundWinnerChange={handleSetRoundWinner}
+        onToggleMrassWin={handleToggleMrassWin}
+        onAddRound={handleAddRound}
+        onToggleRoundDetails={handleToggleRoundDetails}
+        onFinishGame={handleFinishGame}
+        onCancelGame={handleCancelGame}
+        loading={loading}
+      />
     );
   };
 
@@ -814,87 +674,14 @@ export default function JakiPage() {
       return null;
     }
     
-    const totalInvitations = Object.keys(gameData.playerAcceptanceStatus).length;
-    const acceptedInvitations = Object.values(gameData.playerAcceptanceStatus).filter(status => status).length;
-    const isWaiting = acceptedInvitations < totalInvitations;
-
     return (
-      <div className="text-center">
-        <h3 className="fw-bold text-dark mb-4">En attente de la réponse des joueurs</h3>
-        
-        <div className="card mb-4">
-          <div className="card-body">
-            <div className="mb-3">
-              <div className="progress">
-                <div 
-                  className="progress-bar bg-success" 
-                  role="progressbar" 
-                  style={{ width: `${(acceptedInvitations / totalInvitations) * 100}%` }}
-                >
-                  {acceptedInvitations}/{totalInvitations}
-                </div>
-              </div>
-            </div>
-            
-            <p className="text-muted">
-              {isWaiting ? (
-                <>
-                  <i className="bi bi-clock-history me-2"></i>
-                  En attente de {totalInvitations - acceptedInvitations} joueur(s) à répondre ...
-                  <br />
-                  <small>Les joueurs ont 5 minutes pour répondre</small>
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-check-circle-fill text-success me-2"></i>
-                  Tous les joueurs ont accépté l'invitation!
-                </>
-              )}
-            </p>
-
-            {/* Show player status */}
-            <div className="row g-2 mt-3">
-              {Object.entries(gameData.playerAcceptanceStatus).map(([teamSlot, accepted]) => {
-                const playerIndex = parseInt(teamSlot.replace('player', '')) - 1;
-                const playerName = playersData.players[`player${playerIndex + 1}`];
-                
-                return (
-                  <div key={teamSlot} className="col-6">
-                    <div className={`p-2 rounded ${accepted ? 'bg-success bg-opacity-10' : 'bg-warning bg-opacity-10'}`}>
-                      <div className="d-flex align-items-center">
-                        {accepted ? (
-                          <i className="bi bi-check-circle-fill text-success me-2"></i>
-                        ) : (
-                          <i className="bi bi-clock text-warning me-2"></i>
-                        )}
-                        <small className="fw-semibold">{playerName}</small>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {gameData.allInvitationsAccepted && (
-          <button 
-            className="btn btn-success btn-lg me-3"
-            onClick={handleStartGameAfterAcceptance}
-          >
-            <i className="bi bi-play-circle me-2"></i>
-            Commencer jeu
-          </button>
-        )}
-
-        <button 
-          className="btn btn-outline-secondary"
-          onClick={handleCancelGame}
-        >
-          <i className="bi bi-x-circle me-2"></i>
-          Canceller
-        </button>
-      </div>
+      <InvitationWaiting
+        playerAcceptanceStatus={gameData.playerAcceptanceStatus}
+        players={playersData.players}
+        allInvitationsAccepted={gameData.allInvitationsAccepted}
+        onStartGame={handleStartGameAfterAcceptance}
+        onCancel={handleCancelGame}
+      />
     );
   };
 
@@ -1009,27 +796,6 @@ export default function JakiPage() {
     );
   };
 
-  // Helper function to calculate duration
-  const calculateDuration = (startTime, currentTime) => {
-    if (!startTime) return '';
-    
-    const start = new Date(startTime);
-    const now = currentTime || new Date();
-    const diffMs = now - start;
-    
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
-    }
-  };
-
   // Render Jaki game card
   const renderJakiGameCard = (game) => {
     const duration = game.created_at && game.played_at 
@@ -1092,7 +858,7 @@ export default function JakiPage() {
                 {player2IsWinner && (
                   <small className="text-success">
                     <i className="bi bi-trophy-fill me-1"></i>
-                    Gagnant
+Gagnant
                   </small>
                 )}
               </div>

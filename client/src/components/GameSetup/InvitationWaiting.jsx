@@ -1,11 +1,7 @@
 // client/src/components/GameSetup/InvitationWaiting.jsx
-import React from 'react';
-
 const InvitationWaiting = ({
-  gameType,
   playerAcceptanceStatus,
-  chkanPlayers,
-  teamPlayers,
+  players,
   allInvitationsAccepted,
   onStartGame,
   onCancel
@@ -14,20 +10,16 @@ const InvitationWaiting = ({
   const acceptedInvitations = Object.values(playerAcceptanceStatus).filter(status => status).length;
   const isWaiting = acceptedInvitations < totalInvitations;
 
+  // Helper to get the player name based on team slot
   const getPlayerName = (teamSlot) => {
-    if (gameType === 'chkan') {
-      const playerIndex = parseInt(teamSlot.split('-')[1]);
-      return Object.values(chkanPlayers)[playerIndex] || `Player ${playerIndex + 1}`;
-    } else {
-      // S7ab logic for team slots
-      const [team, player] = teamSlot.split('-');
-      return teamPlayers[team][player] || `${team} ${player}`;
-    }
+    const playerIndex = parseInt(teamSlot.replace('player', '')) - 1;
+    const playerKey = `player${playerIndex + 1}`;
+    return players[playerKey] || `Player ${playerIndex + 1}`;
   };
 
   return (
     <div className="text-center">
-      <h3 className="fw-bold text-dark mb-4">Attente des réponses des joueurs</h3>
+      <h3 className="fw-bold text-dark mb-4">Waiting for player responses</h3>
       
       <div className="card mb-4">
         <div className="card-body">
@@ -47,14 +39,14 @@ const InvitationWaiting = ({
             {isWaiting ? (
               <>
                 <i className="bi bi-clock-history me-2"></i>
-                En attente de {totalInvitations - acceptedInvitations} réponse(s)...
+                Waiting for {totalInvitations - acceptedInvitations} player(s) to respond...
                 <br />
-                <small>Les joueurs ont 5 minutes pour répondre</small>
+                <small>Players have 5 minutes to respond</small>
               </>
             ) : (
               <>
                 <i className="bi bi-check-circle-fill text-success me-2"></i>
-                Tous les joueurs ont accepté l'invitation !
+                All players have accepted the invitation!
               </>
             )}
           </p>
@@ -65,7 +57,7 @@ const InvitationWaiting = ({
               const playerName = getPlayerName(teamSlot);
               
               return (
-                <div key={teamSlot} className="col-6 col-md-4">
+                <div key={teamSlot} className="col-6">
                   <div className={`p-2 rounded ${accepted ? 'bg-success bg-opacity-10' : 'bg-warning bg-opacity-10'}`}>
                     <div className="d-flex align-items-center">
                       {accepted ? (
@@ -89,7 +81,7 @@ const InvitationWaiting = ({
           onClick={onStartGame}
         >
           <i className="bi bi-play-circle me-2"></i>
-          Commencer la partie
+          Start Game
         </button>
       )}
 
@@ -98,7 +90,7 @@ const InvitationWaiting = ({
         onClick={onCancel}
       >
         <i className="bi bi-x-circle me-2"></i>
-        Annuler
+        Cancel
       </button>
     </div>
   );
