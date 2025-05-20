@@ -94,6 +94,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     );
   };
 
+  // Render detailed round information based on game type
   const renderRoundDetails = (gameData, gameType) => {
     if (gameType === 'chkan') {
       const players = gameData.players || [];
@@ -165,7 +166,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           {renderWinStats(gameData)}
         </>
       );
-    } else {
+    } else if (gameType === 's7ab') {
       const teams = gameData.teams || [];
       const maxRounds = Math.max(...teams.map(t => t.scores.length));
       
@@ -273,20 +274,107 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           {renderWinStats(gameData)}
         </>
       );
+    } else if (gameType === 'jaki') {
+      // Jaki specific round details
+      const rounds = gameData.rounds || [];
+      const currentRound = gameData.currentRound || 1;
+      
+      if (rounds.length === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      
+      return (
+        <>
+          <div className="table-responsive mt-3">
+            <table className="table table-sm table-bordered">
+              <thead className="bg-light">
+                <tr>
+                  <th className="fw-semibold">Round</th>
+                  <th className="fw-semibold">Winner</th>
+                  <th className="fw-semibold">Points</th>
+                  <th className="fw-semibold">Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rounds.map((round, index) => (
+                  <tr key={index}>
+                    <td>{round.roundNumber}</td>
+                    <td>{round.winner}</td>
+                    <td>{round.points}</td>
+                    <td>
+                      {round.isMrass ? (
+                        <span className="badge bg-danger">
+                          <i className="bi bi-hand-index-thumb me-1"></i>
+                          Mrass
+                        </span>
+                      ) : (
+                        <span className="badge bg-primary">Normal</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Player Win Statistics */}
+          <div className="mt-3 mb-3">
+            <h6 className="text-muted mb-2">Player Statistics</h6>
+            <div className="row g-2">
+              {gameData.players.map((player, index) => {
+                const mrassWins = player.rounds?.filter(r => r.isMrass).length || 0;
+                const normalWins = (player.rounds?.length || 0) - mrassWins;
+                
+                return (
+                  <div key={index} className="col-6">
+                    <div className="card border-0 bg-light">
+                      <div className="card-body p-3">
+                        <h6 className="fw-bold mb-3">{player.name}</h6>
+                        
+                        <div className="row g-2">
+                          <div className="col-4">
+                            <div className="text-center">
+                              <div className="fw-bold h5 mb-0">{player.score}</div>
+                              <div className="small text-muted">Total Score</div>
+                            </div>
+                          </div>
+                          <div className="col-4">
+                            <div className="text-center">
+                              <div className="fw-bold h5 mb-0">{normalWins}</div>
+                              <div className="small text-muted">Normal Wins</div>
+                            </div>
+                          </div>
+                          <div className="col-4">
+                            <div className="text-center">
+                              <div className="fw-bold h5 mb-0">{mrassWins}</div>
+                              <div className="small text-muted">Mrass Wins</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      );
     }
+    
+    return <p className="text-muted">No round details available.</p>;
   };
 
-  const renderActiveGame = (game, index) => {
+  // Render active Rami game (chkan or s7ab)
+  const renderRamiGame = (game, index) => {
     if (!game.gameState) return null;
 
     const gameData = typeof game.gameState === 'string' 
       ? JSON.parse(game.gameState) 
       : game.gameState;
 
-    const gameType = game.gameType;
+    const gameType = gameData.type;
     const duration = calculateDuration(game.createdAt, currentTime);
     const isExpanded = expandedGame === index;
-
+    
     if (gameType === 'chkan') {
       const players = gameData.players || [];
       const currentRound = gameData.currentRound || 1;
@@ -343,15 +431,6 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                 );
               })}
             </div>
-
-            {/* Show additional info for more than 4 players */}
-            {sortedPlayers.length > 4 && (
-              <div className="text-center mt-2">
-                <small className="text-muted">
-                  +{sortedPlayers.length - 4} more player{sortedPlayers.length - 4 > 1 ? 's' : ''}
-                </small>
-              </div>
-            )}
 
             {/* Show/Hide Details Button */}
             {totalRounds > 0 && (
@@ -493,6 +572,127 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
 
     return null;
   };
+
+  // Render active Jaki game
+  const renderJakiGame = (game, index) => {
+    if (!game.gameState) return null;
+
+    const gameData = typeof game.gameState === 'string' 
+      ? JSON.parse(game.gameState) 
+      : game.gameState;
+
+    if (gameData.type !== 'jaki') return null;
+    
+    const duration = calculateDuration(game.createdAt, currentTime);
+    const isExpanded = expandedGame === index;
+    const players = gameData.players || [];
+    const currentRound = gameData.currentRound || 1;
+    const completedRounds = currentRound - 1;
+    const winningScore = gameData.winningScore || 7;
+
+    // Identify leader and potential winner
+    const leader = [...players].sort((a, b) => b.score - a.score)[0];
+    const hasWinner = players.some(p => p.score >= winningScore);
+    const winner = hasWinner ? players.find(p => p.score >= winningScore) : null;
+
+    return (
+      <div key={index} className="card border-0 shadow-sm mb-3">
+        <div className="card-body p-3">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="d-flex align-items-center">
+              <span className="badge bg-warning me-2">🎲 Jaki</span>
+              <span className="fw-semibold">Crée par {game.username}</span>
+            </div>
+            <div className="text-end">
+              <div className="text-muted small">
+                <span>Tour {currentRound}</span>
+                {completedRounds > 0 && (
+                  <span className="ms-1">
+                    ({completedRounds} complétés)
+                  </span>
+                )}
+              </div>
+              <div className="text-muted small">
+                <i className="bi bi-clock me-1"></i>
+                {duration}
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center mb-2">
+            <small className="text-muted">Partie à {winningScore} points</small>
+          </div>
+          
+          <div className="row g-2">
+            {players.map((player, playerIndex) => {
+              const isWinner = hasWinner && player.score >= winningScore;
+              const isLeading = !hasWinner && player === leader;
+              
+              return (
+                <div key={playerIndex} className="col-6">
+                  <div className={`text-center p-2 rounded ${isWinner ? 'bg-success bg-opacity-10 border-success' : isLeading ? 'bg-warning bg-opacity-10' : 'bg-light'}`}>
+                    <div className="fw-bold small text-muted">
+                      {isWinner ? '🏆 WINNER' : isLeading ? '👑 LEADING' : 'PLAYER'}
+                    </div>
+                    <div className="fw-semibold small">{player.name}</div>
+                    <div className={`h5 mb-0 ${isWinner ? 'text-success' : isLeading ? 'text-warning' : 'text-primary'}`}>
+                      {player.score}/{winningScore}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Show/Hide Details Button */}
+          {completedRounds > 0 && (
+            <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => toggleGameDetails(index)}
+              >
+                {isExpanded ? (
+                  <>
+                    <i className="bi bi-chevron-up me-1"></i>
+                    Masquer les détails
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-chevron-down me-1"></i>
+                    Afficher les détails
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="card-footer bg-light">
+            <h6 className="text-muted mb-2">Détails des tours</h6>
+            {renderRoundDetails(gameData, 'jaki')}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderActiveGame = (game, index) => {
+    if (!game.gameState) return null;
+
+    const gameData = typeof game.gameState === 'string' 
+      ? JSON.parse(game.gameState) 
+      : game.gameState;
+
+    // Determine game type and render appropriate component
+    if (gameData.type === 'jaki') {
+      return renderJakiGame(game, index);
+    } else {
+      return renderRamiGame(game, index);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-4">

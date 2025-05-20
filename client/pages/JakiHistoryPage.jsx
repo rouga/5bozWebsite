@@ -147,12 +147,12 @@ const JakiHistoryPage = () => {
                   <td>{round.points}</td>
                   <td>
                     {round.isMrass ? (
-                      <span className="badge bg-danger">
-                        <i className="bi bi-hand-index-thumb me-1"></i>
+                      <span className="badge bg-warning bg-gradient">
+                        <i className="bi bi-ban me-1"></i>
                         Mrass
                       </span>
                     ) : (
-                      <span className="badge bg-primary">Normal</span>
+                      <span className="badge bg-success">Normal</span>
                     )}
                   </td>
                 </tr>
