@@ -20,7 +20,9 @@ const ActiveGame = ({
   onFinishGame,
   onCancelGame,
   onRoundWinnerChange,
-  roundWinner
+  roundWinner,
+  onEnableMgagi,
+  mgagiEnabled
 }) => {
   // Handle automatic score setting for winning team or player
   useEffect(() => {
@@ -382,7 +384,12 @@ const ActiveGame = ({
             <tbody>
               {players.map((player, index) => (
                 <tr key={index}>
-                  <td className="fw-medium">{player.name}</td>
+                  <td className="fw-medium">
+                    {player.name}
+                    {player.isMgagi && (
+                      <span className="badge bg-warning ms-2">Mgagi</span>
+                    )}
+                  </td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
                         {player.scores[roundIndex] !== undefined 
@@ -462,6 +469,41 @@ const ActiveGame = ({
   const completedRounds = getCompletedRounds();
   const duration = calculateDuration();
   const currentDealer = getCurrentDealer();
+
+  // Helper function to determine which players are eligible for Mgagi
+  const getEligibleMgagiPlayers = () => {
+    if (gameType !== 'chkan' || mgagiEnabled) return [];
+    
+    const eligiblePlayers = [];
+    
+    // Get all player scores
+    const playerScores = gameState.players.map(player => ({
+      name: player.name,
+      index: gameState.players.findIndex(p => p.name === player.name),
+      totalScore: player.scores.reduce((a, b) => a + b, 0)
+    }));
+    
+    // Sort scores from highest to lowest
+    playerScores.sort((a, b) => b.totalScore - a.totalScore);
+    
+    // Find players who have score > 701 and no one else has reached 701 yet
+    const playersAboveLimit = playerScores.filter(p => p.totalScore >= 701);
+    
+    if (playersAboveLimit.length === 1) {
+      // Get the second highest score (if available)
+      const secondHighestScore = playerScores.length > 1 ? playerScores[1].totalScore : 0;
+      
+      const player = playersAboveLimit[0];
+      eligiblePlayers.push({
+        name: player.name,
+        index: player.index,
+        totalScore: player.totalScore,
+        newScore: secondHighestScore // This would be their score if they enable Mgagi
+      });
+    }
+    
+    return eligiblePlayers;
+  };
 
   // Function to format dealer display
   const formatDealerDisplay = () => {
@@ -608,6 +650,35 @@ const ActiveGame = ({
     }
   };
 
+  // Get the eligible Mgagi players
+  const eligibleMgagiPlayers = getEligibleMgagiPlayers();
+
+  // Check Mgagi rules: If there is a Mgagi player, game is only won when two players reach 701+
+  const checkMgagiRules = () => {
+    if (gameType !== 'chkan') return null;
+    
+    // Check if there's a Mgagi player
+    const hasMgagiPlayer = gameState.players.some(player => player.isMgagi);
+    
+    if (hasMgagiPlayer) {
+      // Count players who have reached 701+
+      const playersAboveLimit = gameState.players.filter(player => 
+        player.scores.reduce((a, b) => a + b, 0) >= 701
+      );
+      
+      if (playersAboveLimit.length === 1) {
+        return (
+          <div className="alert alert-info mt-3">
+            <i className="bi bi-info-circle-fill me-2"></i>
+            Un joueur Mgagi est en jeu. Pour gagner, deux joueurs doivent atteindre 701 points.
+          </div>
+        );
+      }
+    }
+    
+    return null;
+  };
+
   return (
     <div>
       {/* Game Progress Header */}
@@ -667,6 +738,40 @@ const ActiveGame = ({
       {/* Current Dealer Display */}
       {formatDealerDisplay()}
 
+      {/* Mgagi Option Display for eligible players */}
+      {gameType === 'chkan' && eligibleMgagiPlayers.length > 0 && (
+        <div className="alert alert-warning mb-4">
+          <div className="d-flex align-items-center">
+            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+            <div className="flex-grow-1">
+              <strong>{eligibleMgagiPlayers[0].name}</strong> a dépassé 701 points et peut décider de devenir "Mgagi"
+              <div>
+                <small>Score actuel: <strong>{eligibleMgagiPlayers[0].totalScore}</strong> → Nouveau score: <strong>{eligibleMgagiPlayers[0].newScore}</strong></small>
+              </div>
+              <div className="mt-2">
+                <button 
+                  className="btn btn-warning btn-sm me-2"
+                  onClick={() => onEnableMgagi(eligibleMgagiPlayers[0].index)}
+                >
+                  <i className="bi bi-magic me-1"></i>
+                  Activer Mgagi
+                </button>
+                <button 
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => onEnableMgagi(null)}
+                >
+                  <i className="bi bi-x me-1"></i>
+                  Non merci
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mgagi Rules Display */}
+      {checkMgagiRules()}
+
       {/* Current Standings */}
       {gameState.currentRound > 1 && (
         <div className="card mb-4">
@@ -697,9 +802,14 @@ const ActiveGame = ({
                 {gameState.players.map((player, index) => {
                   const total = player.scores.reduce((sum, score) => sum + score, 0);
                   return (
-                    <div key={index} className="col-6 col-md-3">
+<div key={index} className="col-6 col-md-3">
                       <div className="text-center p-2 bg-light rounded">
-                        <div className="fw-semibold small">{player.name}</div>
+                        <div className="fw-semibold small">
+                          {player.name}
+                          {player.isMgagi && (
+                            <span className="badge bg-warning ms-1">Mgagi</span>
+                          )}
+                        </div>
                         <div className="h5 mb-0 text-primary">{total}</div>
                       </div>
                     </div>
@@ -807,7 +917,12 @@ const ActiveGame = ({
                               placeholder={`Player ${index + 1}`}
                             />
                           ) : (
-                            player.name
+                            <>
+                              {player.name}
+                              {player.isMgagi && (
+                                <span className="badge bg-warning ms-1">Mgagi</span>
+                              )}
+                            </>
                           )}
                           {isWinner && (
                             <span className="badge bg-warning ms-2">

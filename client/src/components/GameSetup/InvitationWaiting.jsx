@@ -1,7 +1,11 @@
 // client/src/components/GameSetup/InvitationWaiting.jsx
+import React from 'react';
+
 const InvitationWaiting = ({
+  gameType,
   playerAcceptanceStatus,
-  players,
+  chkanPlayers,
+  teamPlayers,
   allInvitationsAccepted,
   onStartGame,
   onCancel
@@ -12,9 +16,23 @@ const InvitationWaiting = ({
 
   // Helper to get the player name based on team slot
   const getPlayerName = (teamSlot) => {
-    const playerIndex = parseInt(teamSlot.replace('player', '')) - 1;
-    const playerKey = `player${playerIndex + 1}`;
-    return players[playerKey] || `Player ${playerIndex + 1}`;
+    if (!teamSlot) return "Unknown Player";
+    
+    if (gameType === 'chkan') {
+      // Format is like "player-0", "player-1", etc.
+      const playerIndex = teamSlot.split('-')[1];
+      if (playerIndex !== undefined && chkanPlayers[playerIndex]) {
+        return chkanPlayers[playerIndex];
+      }
+    } else if (gameType === 's7ab') {
+      // Format is like "team1-player1", "team2-player2", etc.
+      const [team, player] = teamSlot.split('-');
+      if (team && player && teamPlayers[team] && teamPlayers[team][player]) {
+        return teamPlayers[team][player];
+      }
+    }
+    
+    return `Player (${teamSlot})`;
   };
 
   return (

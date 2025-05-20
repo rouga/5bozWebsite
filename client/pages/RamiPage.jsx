@@ -568,7 +568,55 @@ export default function RamiPage() {
     dispatchGame({ type: 'SET_SHOW_FORM', payload: true });
   };
 
-  
+    const handleEnableMgagi = (playerIndex) => {
+    if (playerIndex === null) {
+      // User declined Mgagi option
+      return;
+    }
+    
+    const updatedState = { ...gameData.gameState };
+    
+    // Get all player scores
+    const playerScores = updatedState.players.map(player => ({
+      name: player.name,
+      index: updatedState.players.findIndex(p => p.name === player.name),
+      totalScore: player.scores.reduce((a, b) => a + b, 0)
+    }));
+    
+    // Sort scores from highest to lowest
+    playerScores.sort((a, b) => b.totalScore - a.totalScore);
+    
+    // Get the second highest score
+    const secondHighestScore = playerScores.length > 1 ? playerScores[1].totalScore : 0;
+    
+    // Player to become Mgagi
+    const mgagiPlayer = updatedState.players[playerIndex];
+    const currentScore = mgagiPlayer.scores.reduce((a, b) => a + b, 0);
+    
+    // Calculate how much to adjust their score
+    const adjustment = secondHighestScore - currentScore;
+    
+    // Add adjustment as the latest score
+    mgagiPlayer.scores.push(adjustment);
+    
+    // Mark player as Mgagi
+    mgagiPlayer.isMgagi = true;
+    
+    // Update round counter
+    updatedState.currentRound += 1;
+    
+    // Update game state
+    dispatchGame({ type: 'SET_GAME_STATE', payload: updatedState });
+    
+    // Save game state
+    saveGameState(updatedState);
+    
+    // Show success message
+    setStatus({
+      type: 'success',
+      message: `${mgagiPlayer.name} est maintenant Mgagi avec un score de ${secondHighestScore}`
+    });
+  };
 
   const handleStartGameAfterAcceptance = () => {
     let initialState;
@@ -887,25 +935,27 @@ export default function RamiPage() {
     // If we have a game state, show the active game component
     if (gameData.gameState) {
       return (
-        <ActiveGame
-          gameType={gameData.gameType}
-          gameState={gameData.gameState}
-          roundScores={gameData.roundScores}
-          roundInputError={roundInputError}
-          showRoundDetails={gameData.showRoundDetails}
-          loading={loading}
-          gameCreatedAt={gameData.gameCreatedAt}
-          gameTime={gameTime}
-          onRoundScoreChange={handleRoundScoreChange}
-          onPlayerNameChange={handlePlayerNameChange}
-          onTeamNameChange={handleTeamNameChange}
-          onAddRound={handleAddRound}
-          onToggleRoundDetails={handleToggleRoundDetails}
-          onFinishGame={handleFinishGame}
-          onCancelGame={handleCancelGame}
-          onRoundWinnerChange={handleRoundWinnerChange}
-          roundWinner={roundWinner}
-        />
+      <ActiveGame
+        gameType={gameData.gameType}
+        gameState={gameData.gameState}
+        roundScores={gameData.roundScores}
+        roundInputError={roundInputError}
+        showRoundDetails={gameData.showRoundDetails}
+        loading={loading}
+        gameCreatedAt={gameData.gameCreatedAt}
+        gameTime={gameTime}
+        onRoundScoreChange={handleRoundScoreChange}
+        onPlayerNameChange={handlePlayerNameChange}
+        onTeamNameChange={handleTeamNameChange}
+        onAddRound={handleAddRound}
+        onToggleRoundDetails={handleToggleRoundDetails}
+        onFinishGame={handleFinishGame}
+        onCancelGame={handleCancelGame}
+        onRoundWinnerChange={handleRoundWinnerChange}
+        roundWinner={roundWinner}
+        onEnableMgagi={handleEnableMgagi}
+        mgagiEnabled={gameData.gameState?.players?.some(p => p.isMgagi)}
+      />
       );
     }
 
