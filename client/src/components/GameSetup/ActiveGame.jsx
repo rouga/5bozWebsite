@@ -22,10 +22,12 @@ const ActiveGame = ({
   onRoundWinnerChange,
   roundWinner
 }) => {
-  // Handle automatic score setting for winning team
+  // Handle automatic score setting for winning team or player
   useEffect(() => {
-    if (gameType === 's7ab' && roundWinner) {
-      // Step 1: Find which team the winner belongs to
+    if (!roundWinner) return;
+
+    if (gameType === 's7ab') {
+      // S7ab logic for teams - find which team the winner belongs to
       let winningTeamIndex = -1;
       gameState.teams.forEach((team, index) => {
         if (team.players && team.players.includes(roundWinner)) {
@@ -33,7 +35,7 @@ const ActiveGame = ({
         }
       });
       
-      // Step 2: Set scores for all winning team members to 0
+      // Set scores for all winning team members to 0
       if (winningTeamIndex !== -1) {
         const team = gameState.teams[winningTeamIndex];
         if (team.players) {
@@ -41,6 +43,15 @@ const ActiveGame = ({
             onRoundScoreChange(`team-${winningTeamIndex}-player-${playerIndex}`, '0');
           });
         }
+      }
+    } else if (gameType === 'chkan') {
+      // Find the winner's index
+      const winnerIndex = gameState.players.findIndex(player => player.name === roundWinner);
+      
+      if (winnerIndex !== -1) {
+        // We'll apply the special scoring rules for the winner later
+        // First, just clear their score field to indicate it will be auto-calculated
+        onRoundScoreChange(`player-${winnerIndex}`, '');
       }
     }
   }, [roundWinner, gameType]);
@@ -159,14 +170,62 @@ const ActiveGame = ({
     }
   };
 
-  // Helper function for handling add round with pre-validation
+  // Calculate Chkan winner score based on other players' scores
+  const calculateChkanWinnerScore = () => {
+    if (gameType !== 'chkan' || !roundWinner) return null;
+    
+    // Find the winner index
+    const winnerIndex = gameState.players.findIndex(player => player.name === roundWinner);
+    if (winnerIndex === -1) return null;
+    
+    // Check if all other players have scores
+    const allOtherPlayersHaveScores = gameState.players.every((_, playerIndex) => {
+      if (playerIndex === winnerIndex) return true; // Skip the winner
+      return roundScores[`player-${playerIndex}`] !== undefined && 
+             roundScores[`player-${playerIndex}`] !== '';
+    });
+    
+    if (!allOtherPlayersHaveScores) return null;
+    
+    // Check if all other players have a score of exactly 100
+    let allOthersHave100 = true;
+    
+    for (let i = 0; i < gameState.players.length; i++) {
+      if (i === winnerIndex) continue; // Skip the winner
+      
+      const score = parseInt(roundScores[`player-${i}`] || '0');
+      if (score !== 100) {
+        allOthersHave100 = false;
+        break;
+      }
+    }
+    
+    // Apply the scoring rule
+    if (allOthersHave100) {
+      return -30; // Winner gets -30 if all others have exactly 100
+    } else {
+      return -10; // Winner gets -10 if at least one other player has a different score
+    }
+  };
+
   const handleAddRound = () => {
     // Step 1: Make a copy of the current roundScores
     const updatedScores = {...roundScores};
     let scoresUpdated = false;
     
-    // Step 2: Ensure winning team scores are set to 0
-    if (gameType === 's7ab' && roundWinner) {
+    // Step 2: Special handling for Chkan winner
+    if (gameType === 'chkan' && roundWinner) {
+      const winnerIndex = gameState.players.findIndex(player => player.name === roundWinner);
+      if (winnerIndex !== -1) {
+        const winnerScore = calculateChkanWinnerScore();
+        if (winnerScore !== null) {
+          updatedScores[`player-${winnerIndex}`] = winnerScore.toString();
+          scoresUpdated = true;
+        }
+      }
+    }
+    // Step 3: Ensure winning team scores are set to 0 for S7ab
+    else if (gameType === 's7ab' && roundWinner) {
       let winningTeamIndex = -1;
       gameState.teams.forEach((team, index) => {
         if (team.players && team.players.includes(roundWinner)) {
@@ -188,10 +247,14 @@ const ActiveGame = ({
       }
     }
     
-    // Step 3: Set any missing scores to '0'
+    // Step 4: Set any missing scores to '0'
     if (gameType === 'chkan') {
       gameState.players.forEach((_, index) => {
         const key = `player-${index}`;
+        // Skip the winner as their score is calculated separately
+        if (roundWinner && gameState.players[index].name === roundWinner) {
+          return;
+        }
         if (updatedScores[key] === undefined || updatedScores[key] === '') {
           updatedScores[key] = '0';
           scoresUpdated = true;
@@ -211,7 +274,7 @@ const ActiveGame = ({
       });
     }
     
-    // Step 4: Update all scores at once before calling onAddRound
+    // Step 5: Update all scores at once before calling onAddRound
     if (scoresUpdated) {
       // Update all changed scores
       Object.keys(updatedScores).forEach(key => {
@@ -491,6 +554,60 @@ const ActiveGame = ({
     return winningTeamIndex;
   };
 
+  // Check if a player is the round winner in Chkan mode
+  const isChkanWinner = (playerIndex) => {
+    if (gameType !== 'chkan' || !roundWinner) return false;
+    const player = gameState.players[playerIndex];
+    return player && player.name === roundWinner;
+  };
+
+  // Get the calculated score for the winner in Chkan mode
+  const getChkanWinnerScoreDisplay = () => {
+    const winnerScore = calculateChkanWinnerScore();
+    if (winnerScore === null) return "Calculé automatiquement";
+    return winnerScore.toString();
+  };
+
+  // Check if at least one non-winner player has a score different from 100
+  const hasNon100Score = () => {
+    if (gameType !== 'chkan' || !roundWinner) return false;
+    
+    const winnerIndex = gameState.players.findIndex(player => player.name === roundWinner);
+    if (winnerIndex === -1) return false;
+    
+    for (let i = 0; i < gameState.players.length; i++) {
+      if (i === winnerIndex) continue; // Skip the winner
+      
+      const scoreStr = roundScores[`player-${i}`] || '0';
+      const score = parseInt(scoreStr);
+      if (isNaN(score) || score !== 100) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Get the rule explanation for the current winner's score
+  const getWinnerScoreExplanation = () => {
+    if (gameType !== 'chkan' || !roundWinner) return null;
+    
+    const allOtherPlayersEntered = gameState.players.every((player, index) => {
+      if (player.name === roundWinner) return true;
+      return roundScores[`player-${index}`] !== undefined && roundScores[`player-${index}`] !== '';
+    });
+    
+    if (!allOtherPlayersEntered) {
+      return "Entrez les scores des autres joueurs d'abord";
+    }
+    
+    if (hasNon100Score()) {
+      return "Score: -10 (au moins un joueur a un score différent de 100)";
+    } else {
+      return "Score: -30 (tous les autres joueurs ont un score de 100)";
+    }
+  };
+
   return (
     <div>
       {/* Game Progress Header */}
@@ -663,38 +780,59 @@ const ActiveGame = ({
                 <i className="bi bi-info-circle me-1"></i>
                 {gameType === 's7ab' 
                   ? "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour. Les scores de son équipe seront automatiquement mis à 0."
-                  : "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour."}
+                  : "Sélectionnez le joueur qui est allé au bout de ses cartes ce tour. Son score sera calculé automatiquement."}
               </small>
             </div>
           </div>
 
           {gameType === 'chkan' ? (
             <div className="row g-3">
-              {gameState.players.map((player, index) => (
-                <div key={index} className="col-12 col-md-6">
-                  <FormInput
-                    label={
-                      gameState.currentRound === 1 ? (
-                        <input
-                          type="text"
-                          value={player.name}
-                          onChange={(e) => onPlayerNameChange(index, e.target.value)}
-                          className="form-control form-control-sm fw-semibold"
-                          placeholder={`Player ${index + 1}`}
-                        />
-                      ) : (
-                        player.name
-                      )
-                    }
-                    type="number"
-                    name={`player-${index}`}
-                    value={roundScores[`player-${index}`] || ''}
-                    onChange={(e) => onRoundScoreChange(`player-${index}`, e.target.value)}
-                    placeholder="Enter score"
-                    min="0"
-                  />
-                </div>
-              ))}
+              {gameState.players.map((player, index) => {
+                // Check if this player is the round winner
+                const isWinner = roundWinner === player.name;
+                // Get winner score explanation for display
+                const winnerScoreExplanation = isWinner ? getWinnerScoreExplanation() : null;
+                
+                return (
+                  <div key={index} className="col-12 col-md-6">
+                    <FormInput
+                      label={
+                        <>
+                          {gameState.currentRound === 1 ? (
+                            <input
+                              type="text"
+                              value={player.name}
+                              onChange={(e) => onPlayerNameChange(index, e.target.value)}
+                              className="form-control form-control-sm fw-semibold"
+                              placeholder={`Player ${index + 1}`}
+                            />
+                          ) : (
+                            player.name
+                          )}
+                          {isWinner && (
+                            <span className="badge bg-warning ms-2">
+                              <i className="bi bi-trophy-fill me-1"></i>
+                              Round Winner
+                            </span>
+                          )}
+                        </>
+                      }
+                      type="number"
+                      name={`player-${index}`}
+                      value={isWinner ? "" : roundScores[`player-${index}`] || ''}
+                      onChange={(e) => {
+                        // Only allow changes for non-winners
+                        if (!isWinner) {
+                          onRoundScoreChange(`player-${index}`, e.target.value);
+                        }
+                      }}
+                      placeholder={isWinner ? "Score calculé automatiquement" : "Enter score"}
+                      disabled={isWinner}
+                      helpText={winnerScoreExplanation}
+                    />
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="row g-3">

@@ -649,8 +649,14 @@ export default function RamiPage() {
 
     // Validate scores are numbers
     const numericScores = scores.map(score => parseInt(score));
-    if (numericScores.some(score => isNaN(score) || score < 0)) {
-      setRoundInputError('Scores must be positive numbers');
+    if (numericScores.some(score => isNaN(score))) {
+      setRoundInputError('Scores must be valid numbers');
+      return;
+    }
+
+    // For S7ab mode only, validate that scores are not negative
+    if (gameData.gameType === 's7ab' && numericScores.some(score => score < 0)) {
+      setRoundInputError('Team scores must be positive numbers');
       return;
     }
 
