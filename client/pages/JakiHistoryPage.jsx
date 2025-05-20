@@ -160,55 +160,6 @@ const JakiHistoryPage = () => {
             </tbody>
           </table>
         </div>
-
-        {/* Round Win Statistics */}
-        <div className="mt-4">
-          <h6 className="text-muted mb-2">Statisiques Joueur</h6>
-          <div className="row g-2">
-            {gameData.players.map((player, index) => {
-              // Calculate stats
-              const totalRounds = player.rounds?.length || 0;
-              const mrassWins = player.rounds?.filter(r => r.isMrass).length || 0;
-              const normalWins = totalRounds - mrassWins;
-              
-              return (
-                <div key={index} className="col-12 col-md-6">
-                  <div className={`card border-0 ${player.name === game.winner ? 'bg-success bg-opacity-10' : 'bg-light'}`}>
-                    <div className="card-body p-3">
-                      <h6 className="fw-bold mb-3">
-                        {player.name}
-                        {player.name === game.winner && (
-                          <span className="badge bg-success ms-2">Gagnant</span>
-                        )}
-                      </h6>
-                      
-                      <div className="row g-2">
-                        <div className="col-4">
-                          <div className="text-center">
-                            <div className="fw-bold h5 mb-0">{player.score}</div>
-                            <div className="small text-muted">Score Total</div>
-                          </div>
-                        </div>
-                        <div className="col-4">
-                          <div className="text-center">
-                            <div className="fw-bold h5 mb-0">{normalWins}</div>
-                            <div className="small text-muted">Victoire normale</div>
-                          </div>
-                        </div>
-                        <div className="col-4">
-                          <div className="text-center">
-                            <div className="fw-bold h5 mb-0">{mrassWins}</div>
-                            <div className="small text-muted">Victoire par Mrass</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     );
   };
