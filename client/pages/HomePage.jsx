@@ -115,57 +115,60 @@ function HomePage() {
     const player1IsWinner = game.winner === game.player1;
     const player2IsWinner = game.winner === game.player2;
     
+    // Extract authentication info from game_data
+    const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+    const authenticatedPlayers = gameData?.authenticatedPlayers || [];
+    const isPlayer1Authenticated = authenticatedPlayers.includes(game.player1);
+    const isPlayer2Authenticated = authenticatedPlayers.includes(game.player2);
+    
     return (
       <div className="card border-0 shadow-sm h-100">
-        <div className="card-body p-3">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span className="badge bg-warning rounded-pill">🎲 Jaki</span>
-            <div className="text-end">
-              <small className="text-muted d-block">
-                {new Date(game.played_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </small>
-            </div>
-          </div>
-          
-          <div className="text-center mb-2">
-            <small className="text-muted">Jeu sur {game.winning_score} points • {game.total_rounds} Tours complétés</small>
-          </div>
-          
-          <div className="row g-2">
-            <div className="col-5">
-              <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                <div className="fw-semibold small">{game.player1}</div>
-                <div className={`h5 mb-0 ${player1IsWinner ? 'text-success' : 'text-primary'}`}>
-                  {game.score1}
-                </div>
-                {player1IsWinner && (
-                  <small className="text-success">
-                    <i className="bi bi-trophy-fill me-1"></i>
-                    Winner
-                  </small>
+        {/* ... existing card header ... */}
+        
+        <div className="row g-2">
+          <div className="col-5">
+            <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+              <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                {game.player1}
+                {isPlayer1Authenticated && (
+                  <i className="bi bi-check-circle-fill text-success" 
+                    title="Authenticated user" 
+                    style={{ fontSize: '0.8rem' }}></i>
                 )}
               </div>
+              <div className={`h5 mb-0 ${player1IsWinner ? 'text-success' : 'text-primary'}`}>
+                {game.score1}
+              </div>
+              {player1IsWinner && (
+                <small className="text-success">
+                  <i className="bi bi-trophy-fill me-1"></i>
+                  Winner
+                </small>
+              )}
             </div>
-            <div className="col-2 d-flex align-items-center justify-content-center">
-              <span className="text-muted fw-medium">VS</span>
-            </div>
-            <div className="col-5">
-              <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                <div className="fw-semibold small">{game.player2}</div>
-                <div className={`h5 mb-0 ${player2IsWinner ? 'text-success' : 'text-primary'}`}>
-                  {game.score2}
-                </div>
-                {player2IsWinner && (
-                  <small className="text-success">
-                    <i className="bi bi-trophy-fill me-1"></i>
-                    Winner
-                  </small>
+          </div>
+          <div className="col-2 d-flex align-items-center justify-content-center">
+            <span className="text-muted fw-medium">VS</span>
+          </div>
+          <div className="col-5">
+            <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+              <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                {game.player2}
+                {isPlayer2Authenticated && (
+                  <i className="bi bi-check-circle-fill text-success" 
+                    title="Authenticated user" 
+                    style={{ fontSize: '0.8rem' }}></i>
                 )}
               </div>
+              <div className={`h5 mb-0 ${player2IsWinner ? 'text-success' : 'text-primary'}`}>
+                {game.score2}
+              </div>
+              {player2IsWinner && (
+                <small className="text-success">
+                  <i className="bi bi-trophy-fill me-1"></i>
+                  Winner
+                </small>
+              )}
             </div>
           </div>
         </div>

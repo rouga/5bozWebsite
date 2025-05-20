@@ -198,6 +198,12 @@ const JakiHistoryPage = () => {
                 const player1IsWinner = game.winner === game.player1;
                 const player2IsWinner = game.winner === game.player2;
                 
+                // Extract authentication info from game_data
+                const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+                const authenticatedPlayers = gameData?.authenticatedPlayers || [];
+                const isPlayer1Authenticated = authenticatedPlayers.includes(game.player1);
+                const isPlayer2Authenticated = authenticatedPlayers.includes(game.player2);
+                
                 return (
                   <div key={game.id} className="col-12">
                     <div className="card shadow-sm border-0 game-card">
@@ -228,7 +234,14 @@ const JakiHistoryPage = () => {
                         <div className="row g-2 mb-3">
                           <div className="col-5">
                             <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                              <div className="fw-semibold small">{game.player1}</div>
+                              <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                                {game.player1}
+                                {isPlayer1Authenticated && (
+                                  <i className="bi bi-check-circle-fill text-success" 
+                                     title="Authenticated user" 
+                                     style={{ fontSize: '0.8rem' }}></i>
+                                )}
+                              </div>
                               <div className={`h5 mb-0 ${player1IsWinner ? 'text-success' : 'text-primary'}`}>
                                 {game.score1}
                               </div>
@@ -245,7 +258,14 @@ const JakiHistoryPage = () => {
                           </div>
                           <div className="col-5">
                             <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                              <div className="fw-semibold small">{game.player2}</div>
+                              <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                                {game.player2}
+                                {isPlayer2Authenticated && (
+                                  <i className="bi bi-check-circle-fill text-success" 
+                                     title="Authenticated user" 
+                                     style={{ fontSize: '0.8rem' }}></i>
+                                )}
+                              </div>
                               <div className={`h5 mb-0 ${player2IsWinner ? 'text-success' : 'text-primary'}`}>
                                 {game.score2}
                               </div>

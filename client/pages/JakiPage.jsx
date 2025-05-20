@@ -527,22 +527,34 @@ export default function JakiPage() {
     }
   };
 
-  const handleFinishGame = async (gameState = null) => {
+    const handleFinishGame = async (gameState = null) => {
     try {
-      setLoading(true);
-      
-      const stateToFinish = gameState || gameData.gameState;
-      
-      // Make sure we have a winner
-      if (!stateToFinish.completed && !stateToFinish.winner) {
+        setLoading(true);
+        
+        const stateToFinish = gameState || gameData.gameState;
+        
+        // Make sure we have a winner
+        if (!stateToFinish.completed && !stateToFinish.winner) {
         // Determine winner manually if needed
         const winnerIndex = stateToFinish.players[0].score >= stateToFinish.players[1].score ? 0 : 1;
         stateToFinish.winner = stateToFinish.players[winnerIndex].name;
         stateToFinish.completed = true;
-      }
-      
-      // Prepare data for saving
-      const gameDataToSave = {
+        }
+        
+        // Get list of registered users for authentication tracking
+        const registeredUsernames = registeredUsers.map(u => u.username.toLowerCase());
+        
+        // Check which players are authenticated users
+        const authenticatedPlayers = [
+        stateToFinish.players[0].name,
+        stateToFinish.players[1].name
+        ].filter(name => registeredUsernames.includes(name.toLowerCase()));
+        
+        // Add authentication info to game data
+        stateToFinish.authenticatedPlayers = authenticatedPlayers;
+        
+        // Prepare data for saving
+        const gameDataToSave = {
         player1: stateToFinish.players[0].name,
         player2: stateToFinish.players[1].name,
         score1: stateToFinish.players[0].score,
@@ -552,44 +564,44 @@ export default function JakiPage() {
         total_rounds: stateToFinish.currentRound - 1,
         created_at: gameData.gameCreatedAt,
         game_data: stateToFinish
-      };
-      
-      // Save completed game
-      const response = await fetch('http://192.168.0.12:5000/api/jaki/games', {
+        };
+        
+        // Save completed game
+        const response = await fetch('http://192.168.0.12:5000/api/jaki/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(gameDataToSave)
-      });
-      
-      if (!response.ok) {
+        });
+        
+        if (!response.ok) {
         throw new Error('Failed to save Jaki game');
-      }
-      
-      // Delete active game
-      await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
+        }
+        
+        // Delete active game
+        await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
         method: 'DELETE',
         credentials: 'include'
-      });
-      
-      showSuccess('Game completed successfully!');
-      
-      // Reset game state
-      dispatchGame({ type: 'RESET_GAME' });
-      dispatchPlayers({ type: 'RESET_PLAYERS' });
-      
-      // Refresh games list
-      setPage(1);
-      setHasMore(true);
-      fetchRecentGames();
-      
+        });
+        
+        showSuccess('Game completed successfully!');
+        
+        // Reset game state
+        dispatchGame({ type: 'RESET_GAME' });
+        dispatchPlayers({ type: 'RESET_PLAYERS' });
+        
+        // Refresh games list
+        setPage(1);
+        setHasMore(true);
+        fetchRecentGames();
+        
     } catch (err) {
-      console.error('Error finishing Jaki game:', err);
-      showError('Failed to save game. Please try again.');
+        console.error('Error finishing Jaki game:', err);
+        showError('Failed to save game. Please try again.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+    };
 
   const handleCancelGame = async () => {
     try {
@@ -797,77 +809,97 @@ export default function JakiPage() {
   };
 
   // Render Jaki game card
-  const renderJakiGameCard = (game) => {
+    const renderJakiGameCard = (game) => {
     const duration = game.created_at && game.played_at 
-      ? calculateDuration(new Date(game.created_at), new Date(game.played_at))
-      : null;
-      
+        ? calculateDuration(new Date(game.created_at), new Date(game.played_at))
+        : null;
+        
     const player1IsWinner = game.winner === game.player1;
     const player2IsWinner = game.winner === game.player2;
     
+    // Extract authentication info from game_data
+    const gameData = typeof game.game_data === 'string' ? JSON.parse(game.game_data) : game.game_data;
+    const authenticatedPlayers = gameData?.authenticatedPlayers || [];
+    const isPlayer1Authenticated = authenticatedPlayers.includes(game.player1);
+    const isPlayer2Authenticated = authenticatedPlayers.includes(game.player2);
+    
     return (
-      <div className="card border-0 shadow-sm h-100">
+        <div className="card border-0 shadow-sm h-100">
         <div className="card-body p-3">
-          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
             <span className="badge bg-warning rounded-pill">🎲 Jaki</span>
             <div className="text-end">
-              <small className="text-muted d-block">
+                <small className="text-muted d-block">
                 {new Date(game.played_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
                 })}
-              </small>
-              {duration && (
-                <small className="text-muted">
-                  <i className="bi bi-clock me-1"></i>
-                  {duration}
                 </small>
-              )}
+                {duration && (
+                <small className="text-muted">
+                    <i className="bi bi-clock me-1"></i>
+                    {duration}
+                </small>
+                )}
             </div>
-          </div>
-          
-          <div className="text-center mb-2">
+            </div>
+            
+            <div className="text-center mb-2">
             <small className="text-muted">Jeu sur {game.winning_score} points • {game.total_rounds} Tours complétés</small>
-          </div>
-          
-          <div className="row g-2">
+            </div>
+            
+            <div className="row g-2">
             <div className="col-5">
-              <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                <div className="fw-semibold small">{game.player1}</div>
+                <div className={`text-center p-2 rounded ${player1IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                    {game.player1}
+                    {isPlayer1Authenticated && (
+                    <i className="bi bi-check-circle-fill text-success" 
+                        title="Authenticated user" 
+                        style={{ fontSize: '0.8rem' }}></i>
+                    )}
+                </div>
                 <div className={`h5 mb-0 ${player1IsWinner ? 'text-success' : 'text-primary'}`}>
-                  {game.score1}
+                    {game.score1}
                 </div>
                 {player1IsWinner && (
-                  <small className="text-success">
+                    <small className="text-success">
                     <i className="bi bi-trophy-fill me-1"></i>
                     Winner
-                  </small>
+                    </small>
                 )}
-              </div>
+                </div>
             </div>
             <div className="col-2 d-flex align-items-center justify-content-center">
-              <span className="text-muted fw-medium">VS</span>
+                <span className="text-muted fw-medium">VS</span>
             </div>
             <div className="col-5">
-              <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
-                <div className="fw-semibold small">{game.player2}</div>
+                <div className={`text-center p-2 rounded ${player2IsWinner ? 'bg-success bg-opacity-10 border-success' : 'bg-light'}`}>
+                <div className="fw-semibold small d-flex align-items-center justify-content-center gap-1">
+                    {game.player2}
+                    {isPlayer2Authenticated && (
+                    <i className="bi bi-check-circle-fill text-success" 
+                        title="Authenticated user" 
+                        style={{ fontSize: '0.8rem' }}></i>
+                    )}
+                </div>
                 <div className={`h5 mb-0 ${player2IsWinner ? 'text-success' : 'text-primary'}`}>
-                  {game.score2}
+                    {game.score2}
                 </div>
                 {player2IsWinner && (
-                  <small className="text-success">
+                    <small className="text-success">
                     <i className="bi bi-trophy-fill me-1"></i>
-Gagnant
-                  </small>
+                    Gagnant
+                    </small>
                 )}
-              </div>
+                </div>
             </div>
-          </div>
+            </div>
         </div>
-      </div>
+        </div>
     );
-  };
+    };
 
   return (
     <div className="container-fluid px-3 mt-4">
