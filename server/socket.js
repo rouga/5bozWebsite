@@ -8,13 +8,14 @@ const pool = new Pool({
 });
 
 function initializeSocket(server) {
-  const io = new Server(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
-      credentials: true
-    }
-  });
-  
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
   // Store socket connections by user ID
   const userSockets = new Map();
 

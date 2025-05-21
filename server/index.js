@@ -11,7 +11,9 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors({
   credentials: true, 
-  origin: process.env.CLIENT_URL || "http://localhost:5173"
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(session({
@@ -44,15 +46,6 @@ const { io, userSockets } = initializeSocket(server);
 // Make io and userSockets available to routes
 app.locals.io = io;
 app.locals.userSockets = userSockets;
-
-if (process.env.NODE_ENV === 'production') {
-  const path = require('path');
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  });
-}
 
 // Import Jaki routes
 const jakiRoutes = require('./routes/jaki');
