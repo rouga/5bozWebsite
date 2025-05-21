@@ -6,5 +6,19 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: true
+  },
+  
+  preview: {
+    port: 5173,
+    strictPort: true,
+    host: true,
+    headers: {
+      "Cache-Control": "no-store"
+    }
   }
 })
