@@ -65,7 +65,26 @@ export const gameAPI = {
   
   deleteActiveGame: () => apiCall('/api/active-game', { method: 'DELETE' }),
   
-  getActiveGames: () => apiCall('/api/active-games')
+  getActiveGames: () => apiCall('/api/active-games'),
+  
+  // Jaki-specific API calls
+  jakiAPI: {
+    getGames: (page = 1, limit = 10) => apiCall(`/api/jaki/games?page=${page}&limit=${limit}`),
+    
+    getActiveGame: () => apiCall('/api/jaki/active-game'),
+    
+    saveActiveGame: (gameState) => apiCall('/api/jaki/active-game', {
+      method: 'POST',
+      body: JSON.stringify({ gameState })
+    }),
+    
+    deleteActiveGame: () => apiCall('/api/jaki/active-game', { method: 'DELETE' }),
+    
+    saveGame: (gameData) => apiCall('/api/jaki/games', {
+      method: 'POST',
+      body: JSON.stringify(gameData)
+    })
+  }
 };
 
 // Error handler utility
