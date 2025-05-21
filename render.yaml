@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: 5boz-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: 5boz-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://5boz-app.onrender.com
+      - key: SIGNUP_SECRET
+        sync: false
+
+  - type: web
+    name: 5boz-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://5boz-backend.onrender.com
+
+databases:
+  - name: 5boz-db
+    plan: free
