@@ -657,11 +657,12 @@ export default function RamiPage() {
         initialDealer: initialDealer // Add this line
       };
     }
-    
+   
     dispatchGame({ type: 'SET_GAME_STATE', payload: initialState });
     dispatchGame({ type: 'SET_GAME_CREATED_AT', payload: new Date().toISOString() });
     initializeRoundScores(initialState);
     dispatchGame({ type: 'SET_ALL_INVITATIONS_ACCEPTED', payload: false });
+   saveGameState(initialState);
   };
 
   const handlePlayerNameChange = (index, newName) => {

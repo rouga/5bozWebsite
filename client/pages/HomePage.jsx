@@ -66,14 +66,31 @@ function HomePage() {
         throw new Error('Failed to load Jaki active games');
       }
       
-      const ramiGames = await ramiGamesResponse.json();
-      const jakiGames = await jakiGamesResponse.json();
+      let ramiGames = await ramiGamesResponse.json();
+      let jakiGames = await jakiGamesResponse.json();
+      
+      // Debug - log the games before processing
+      console.log("Rami games before processing:", ramiGames);
+      console.log("Jaki games before processing:", jakiGames);
+      
+      // Ensure gameState is properly parsed for all games
+      ramiGames = ramiGames.map(game => ({
+        ...game,
+        gameState: typeof game.gameState === 'string' ? JSON.parse(game.gameState) : game.gameState
+      }));
+      
+      jakiGames = jakiGames.map(game => ({
+        ...game,
+        gameState: typeof game.gameState === 'string' ? JSON.parse(game.gameState) : game.gameState
+      }));
       
       // Combine all active games
       const allGames = [...ramiGames, ...jakiGames];
       
       // Sort by updated time to show most recent first
       allGames.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      
+      console.log("All games after processing:", allGames);
       
       setActiveGames(allGames);
     } catch (error) {
@@ -82,7 +99,7 @@ function HomePage() {
     } finally {
       setLoadingActiveGames(false);
     }
-  };
+};
 
   // Get only the most recent scores for each game type
   const latestRamiScores = ramiScores.slice(0, 5);

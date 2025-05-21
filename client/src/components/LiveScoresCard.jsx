@@ -98,9 +98,11 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
   const renderRoundDetails = (gameData, gameType) => {
     if (gameType === 'chkan') {
       const players = gameData.players || [];
-      const maxRounds = Math.max(...players.map(p => p.scores.length));
+      const maxRounds = Math.max(...players.map(p => p.scores ? p.scores.length : 0));
       
-      if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      if (maxRounds === 0) {
+        return <p className="text-muted">Aucun tour terminé. En attente du premier tour...</p>;
+      }
       
       // Helper function to get dealer name for a specific round
       const getDealerForRound = (roundIndex) => {
@@ -145,13 +147,13 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                     <td className="fw-medium">{player.name}</td>
                     {Array.from({ length: maxRounds }, (_, roundIndex) => (
                       <td key={roundIndex} className="text-center">
-                        {player.scores[roundIndex] !== undefined 
+                        {player.scores && player.scores[roundIndex] !== undefined 
                           ? (player.scores[roundIndex] === 0 ? '-' : player.scores[roundIndex]) 
                           : '–'}
                       </td>
                     ))}
                     <td className="text-center fw-bold bg-primary text-white">
-                      {player.scores.reduce((a, b) => a + b, 0)}
+                      {player.scores ? player.scores.reduce((a, b) => a + b, 0) : 0}
                     </td>
                   </tr>
                 ))}
@@ -159,18 +161,24 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </table>
           </div>
           
-          {/* Score Statistics */}
-          <ScoreContributionStats gameData={gameData} gameType={gameType} />
-          
-          {/* Round Win Statistics */}
-          {renderWinStats(gameData)}
+          {maxRounds > 0 && (
+            <>
+              {/* Score Statistics */}
+              <ScoreContributionStats gameData={gameData} gameType={gameType} />
+              
+              {/* Round Win Statistics */}
+              {renderWinStats(gameData)}
+            </>
+          )}
         </>
       );
     } else if (gameType === 's7ab') {
       const teams = gameData.teams || [];
-      const maxRounds = Math.max(...teams.map(t => t.scores.length));
+      const maxRounds = Math.max(...teams.map(t => t.scores ? t.scores.length : 0));
       
-      if (maxRounds === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      if (maxRounds === 0) {
+        return <p className="text-muted">Aucun tour terminé. En attente du premier tour...</p>;
+      }
       
       // Helper function to get dealer name for a specific round
       const getDealerForRound = (roundIndex) => {
@@ -252,13 +260,13 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
                       </td>
                       {Array.from({ length: maxRounds }, (_, roundIndex) => (
                         <td key={roundIndex} className="text-center">
-                          {team.scores[roundIndex] !== undefined 
+                          {team.scores && team.scores[roundIndex] !== undefined 
                             ? (team.scores[roundIndex] === 0 ? '-' : team.scores[roundIndex]) 
                             : '–'}
                         </td>
                       ))}
                       <td className="text-center fw-bold bg-primary text-white">
-                        {team.scores.reduce((a, b) => a + b, 0)}
+                        {team.scores ? team.scores.reduce((a, b) => a + b, 0) : 0}
                       </td>
                     </tr>
                   );
@@ -267,19 +275,24 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </table>
           </div>
           
-          {/* Score Statistics */}
-          <ScoreContributionStats gameData={gameData} gameType={gameType} />
-          
-          {/* Round Win Statistics */}
-          {renderWinStats(gameData)}
+          {maxRounds > 0 && (
+            <>
+              {/* Score Statistics */}
+              <ScoreContributionStats gameData={gameData} gameType={gameType} />
+              
+              {/* Round Win Statistics */}
+              {renderWinStats(gameData)}
+            </>
+          )}
         </>
       );
     } else if (gameType === 'jaki') {
       // Jaki specific round details
       const rounds = gameData.rounds || [];
-      const currentRound = gameData.currentRound || 1;
       
-      if (rounds.length === 0) return <p className="text-muted">No rounds completed yet.</p>;
+      if (rounds.length === 0) {
+        return <p className="text-muted">Aucun tour terminé. En attente du premier tour...</p>;
+      }
       
       return (
         <>
@@ -360,7 +373,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
       );
     }
     
-    return <p className="text-muted">No round details available.</p>;
+    return <p className="text-muted">Aucun tour terminé. En attente du premier tour...</p>;
   };
 
   // Render active Rami game (chkan or s7ab)
@@ -378,12 +391,12 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     if (gameType === 'chkan') {
       const players = gameData.players || [];
       const currentRound = gameData.currentRound || 1;
-      const totalRounds = players.length > 0 ? players[0].scores.length : 0;
+      const totalRounds = players.length > 0 && players[0].scores ? players[0].scores.length : 0;
       
       // Sort players by current score
       const sortedPlayers = [...players].sort((a, b) => {
-        const scoreA = a.scores.reduce((sum, score) => sum + score, 0);
-        const scoreB = b.scores.reduce((sum, score) => sum + score, 0);
+        const scoreA = a.scores ? a.scores.reduce((sum, score) => sum + score, 0) : 0;
+        const scoreB = b.scores ? b.scores.reduce((sum, score) => sum + score, 0) : 0;
         return scoreA - scoreB;
       });
 
@@ -413,7 +426,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             
             <div className="row g-2">
               {sortedPlayers.map((player, playerIndex) => {
-                const totalScore = player.scores.reduce((sum, score) => sum + score, 0);
+                const totalScore = player.scores ? player.scores.reduce((sum, score) => sum + score, 0) : 0;
                 const isLeading = playerIndex === 0;
                 
                 return (
@@ -433,26 +446,24 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </div>
 
             {/* Show/Hide Details Button */}
-            {totalRounds > 0 && (
-              <div className="d-flex justify-content-center mt-3 pt-3 border-top">
-                <button
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => toggleGameDetails(index)}
-                >
-                  {isExpanded ? (
-                    <>
-                      <i className="bi bi-chevron-up me-1"></i>
-                      Masquer les détails
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-chevron-down me-1"></i>
-                      Afficher les détails
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => toggleGameDetails(index)}
+              >
+                {isExpanded ? (
+                  <>
+                    <i className="bi bi-chevron-up me-1"></i>
+                    Masquer les détails
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-chevron-down me-1"></i>
+                    Afficher les détails
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Expanded Details */}
@@ -467,13 +478,13 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     } else if (gameType === 's7ab') {
       const teams = gameData.teams || [];
       const currentRound = gameData.currentRound || 1;
-      const totalRounds = teams.length > 0 ? teams[0].scores.length : 0;
+      const totalRounds = teams.length > 0 && teams[0].scores ? teams[0].scores.length : 0;
       
       if (teams.length < 2) return null;
 
-      const team1Score = teams[0].scores.reduce((sum, score) => sum + score, 0);
-      const team2Score = teams[1].scores.reduce((sum, score) => sum + score, 0);
-      const isTeam1Leading = team1Score < team2Score;
+      const team1Score = teams[0].scores ? teams[0].scores.reduce((sum, score) => sum + score, 0) : 0;
+      const team2Score = teams[1].scores ? teams[1].scores.reduce((sum, score) => sum + score, 0) : 0;
+      const isTeam1Leading = team1Score <= team2Score;
 
       // Format player names
       const formatTeamPlayers = (team) => {
@@ -537,26 +548,24 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
             </div>
 
             {/* Show/Hide Details Button */}
-            {totalRounds > 0 && (
-              <div className="d-flex justify-content-center mt-3 pt-3 border-top">
-                <button
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => toggleGameDetails(index)}
-                >
-                  {isExpanded ? (
-                    <>
-                      <i className="bi bi-chevron-up me-1"></i>
-                      Masquer les détails
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-chevron-down me-1"></i>
-                      Afficher les détails
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+            <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => toggleGameDetails(index)}
+              >
+                {isExpanded ? (
+                  <>
+                    <i className="bi bi-chevron-up me-1"></i>
+                    Masquer les détails
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-chevron-down me-1"></i>
+                    Afficher les détails
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Expanded Details */}
@@ -587,7 +596,7 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
     const isExpanded = expandedGame === index;
     const players = gameData.players || [];
     const currentRound = gameData.currentRound || 1;
-    const completedRounds = currentRound - 1;
+    const completedRounds = gameData.rounds ? gameData.rounds.length : 0;
     const winningScore = gameData.winningScore || 7;
 
     // Identify leader and potential winner
@@ -645,26 +654,24 @@ const LiveScoresCard = ({ activeGames, loading, error }) => {
           </div>
 
           {/* Show/Hide Details Button */}
-          {completedRounds > 0 && (
-            <div className="d-flex justify-content-center mt-3 pt-3 border-top">
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => toggleGameDetails(index)}
-              >
-                {isExpanded ? (
-                  <>
-                    <i className="bi bi-chevron-up me-1"></i>
-                    Masquer les détails
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-chevron-down me-1"></i>
-                    Afficher les détails
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          <div className="d-flex justify-content-center mt-3 pt-3 border-top">
+            <button
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => toggleGameDetails(index)}
+            >
+              {isExpanded ? (
+                <>
+                  <i className="bi bi-chevron-up me-1"></i>
+                  Masquer les détails
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-chevron-down me-1"></i>
+                  Afficher les détails
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Expanded Details */}
