@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
 import GameInvitationModal from './GameInvitationModal';
+import { API_BASE_URL } from '../utils/api';
 
 const GlobalInvitationHandler = () => {
   const [user] = useAuth();
@@ -17,7 +18,7 @@ const GlobalInvitationHandler = () => {
     if (!user || isResponding || !socket) return;
 
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/my-invitations', {
+      const response = await fetch(`${API_BASE_URL}/api/my-invitations`, {
         credentials: 'include'
       });
       

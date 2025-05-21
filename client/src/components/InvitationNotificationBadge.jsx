@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
+import { API_BASE_URL } from '../utils/api';
 
 const InvitationNotificationBadge = () => {
   const [user] = useAuth();
@@ -39,7 +40,7 @@ const InvitationNotificationBadge = () => {
     if (!user) return;
     
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/my-invitations', {
+      const response = await fetch(`${API_BASE_URL}/api/my-invitations`, {
         credentials: 'include'
       });
       

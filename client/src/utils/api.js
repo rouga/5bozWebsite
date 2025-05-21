@@ -1,6 +1,6 @@
 // client/src/utils/api.js
 
-const API_BASE_URL = 'http://192.168.0.12:5000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Generic API call helper
 const apiCall = async (endpoint, options = {}) => {

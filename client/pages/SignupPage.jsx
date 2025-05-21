@@ -16,7 +16,7 @@ export default function SignupPage() {
     setStatus(null);
     
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/signup', {
+      const res = await fetch(`${API_BASE_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

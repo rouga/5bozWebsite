@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../utils/api';
 
 export default function useAuth() {
   // Using explicit states: null = loading, false = not logged in, object = logged in
@@ -7,7 +8,7 @@ export default function useAuth() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/me', {
+      const res = await fetch(`${API_BASE_URL}/api/me`, {
         credentials: 'include'
       });
       

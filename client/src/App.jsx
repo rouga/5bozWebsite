@@ -14,6 +14,7 @@ import useAuth from './hooks/useAuth';
 import useSocket from './hooks/useSocket';
 import { InvitationNotificationBadge } from './components';
 import GlobalInvitationHandler from './components/GlobalInvitationHandler';
+import { API_BASE_URL } from '../src/utils/api';
 
 function App() {
   const [user, setUser, refreshUser] = useAuth();
@@ -33,7 +34,7 @@ function App() {
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/logout', {
+      const res = await fetch(`${API_BASE_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include'
       });

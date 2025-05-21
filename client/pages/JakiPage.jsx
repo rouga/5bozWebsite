@@ -17,7 +17,8 @@ import {
   InvitationWaiting,
   ActiveGame
 } from '../src/components/JakiGameSetup';
-import { gameAPI, handleApiError } from '../src/utils/api';
+import { gameAPI, handleApiError, API_BASE_URL } from '../src/utils/api';
+
 
 // Game state reducer
 const gameStateReducer = (state, action) => {
@@ -205,7 +206,7 @@ export default function JakiPage() {
   // API Functions
   const fetchRegisteredUsers = async () => {
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/users', {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
         credentials: 'include'
       });
       if (response.ok) {
@@ -220,7 +221,7 @@ export default function JakiPage() {
   const fetchRecentGames = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://192.168.0.12:5000/api/jaki/games?page=${page}&limit=${gamesPerPage}`, {
+      const response = await fetch(`${API_BASE_URL}/api/jaki/games?page=${page}&limit=${gamesPerPage}`, {
         credentials: 'include'
       });
       
@@ -246,7 +247,7 @@ export default function JakiPage() {
   const checkForActiveGame = async () => {
     try {
       setLoadingActiveGame(true);
-      const response = await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
+      const response = await fetch(`${API_BASE_URL}/api/jaki/active-game`, {
         credentials: 'include'
       });
       
@@ -271,7 +272,7 @@ export default function JakiPage() {
 
   const checkAllInvitationsAccepted = async (gameId) => {
     try {
-      const response = await fetch(`http://192.168.0.12:5000/api/game-invitations/${gameId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/game-invitations/${gameId}`, {
         credentials: 'include'
       });
       
@@ -289,7 +290,7 @@ export default function JakiPage() {
     if (!user) return;
     
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
+      const response = await fetch(`${API_BASE_URL}/api/jaki/active-game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -325,7 +326,7 @@ export default function JakiPage() {
         gameId
       });
       
-      const response = await fetch('http://192.168.0.12:5000/api/game-invitations', {
+      const response = await fetch(`${API_BASE_URL}/api/game-invitations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -567,7 +568,7 @@ export default function JakiPage() {
         };
         
         // Save completed game
-        const response = await fetch('http://192.168.0.12:5000/api/jaki/games', {
+        const response = await fetch(`${API_BASE_URL}/api/jaki/games`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -579,7 +580,7 @@ export default function JakiPage() {
         }
         
         // Delete active game
-        await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
+        await fetch(`${API_BASE_URL}/api/jaki/active-game`, {
         method: 'DELETE',
         credentials: 'include'
         });
@@ -605,7 +606,7 @@ export default function JakiPage() {
 
   const handleCancelGame = async () => {
     try {
-      await fetch('http://192.168.0.12:5000/api/jaki/active-game', {
+      await fetch(`${API_BASE_URL}/api/jaki/active-game`, {
         method: 'DELETE',
         credentials: 'include'
       });

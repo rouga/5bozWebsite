@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FormInput, StatusAlert, LoadingOverlay } from '../src/components/';
+import { API_BASE_URL } from '../src/utils/api';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -19,7 +20,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const res = await fetch('http://192.168.0.12:5000/api/me', {
+        const res = await fetch(`${API_BASE_URL}/api/me`, {
           credentials: 'include'
         });
         
@@ -79,7 +80,7 @@ export default function ProfilePage() {
     }
     
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/change-password', {
+      const res = await fetch(`${API_BASE_URL}/api/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

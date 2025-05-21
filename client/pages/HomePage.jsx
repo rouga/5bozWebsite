@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { GameCard, PageHeader, SectionCard, EmptyState, LiveScoresCard } from '../src/components';
 import { gameAPI } from '../src/utils/api';
+import { API_BASE_URL } from '../src/utils/api';
 
 function HomePage() {
   const [ramiScores, setRamiScores] = useState([]);
@@ -24,7 +25,7 @@ function HomePage() {
 
   const fetchRamiScores = async () => {
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/scores');
+      const res = await fetch(`${API_BASE_URL}/api/scores`);
       if (res.ok) {
         const data = await res.json();
         setRamiScores(data);
@@ -36,7 +37,7 @@ function HomePage() {
 
   const fetchJakiScores = async () => {
     try {
-      const res = await fetch('http://192.168.0.12:5000/api/jaki/games');
+      const res = await fetch(`${API_BASE_URL}/api/jaki/games`);
       if (res.ok) {
         const data = await res.json();
         setJakiScores(data);
@@ -53,8 +54,8 @@ function HomePage() {
       
       // Fetch all active games from both Rami and Jaki
       const [ramiGamesResponse, jakiGamesResponse] = await Promise.all([
-        fetch('http://192.168.0.12:5000/api/active-games', { credentials: 'include' }),
-        fetch('http://192.168.0.12:5000/api/jaki/active-games', { credentials: 'include' })
+        fetch(`${API_BASE_URL}/api/active-games`, { credentials: 'include' }),
+        fetch(`${API_BASE_URL}/api/jaki/active-games`, { credentials: 'include' })
       ]);
       
       if (!ramiGamesResponse.ok) {

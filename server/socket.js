@@ -4,16 +4,17 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 function initializeSocket(server) {
   const io = new Server(server, {
     cors: {
-      origin: "http://192.168.0.12:5173",
+      origin: process.env.CLIENT_URL || "http://localhost:5173",
       credentials: true
     }
   });
-
+  
   // Store socket connections by user ID
   const userSockets = new Map();
 

@@ -6,6 +6,8 @@ import {
   StatusAlert
 } from '../src/components';
 
+import { API_BASE_URL } from '../src/utils/api';
+
 const JakiHistoryPage = () => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ const JakiHistoryPage = () => {
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://192.168.0.12:5000/api/jaki/games?page=${page}&limit=${gamesPerPage}`, {
+      const res = await fetch(`${API_BASE_URL}/api/jaki/games?page=${page}&limit=${gamesPerPage}`, {
         credentials: 'include'
       });
       

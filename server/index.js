@@ -9,18 +9,22 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({credentials: true, origin: "http://192.168.0.12:5173"}));
+app.use(cors({
+  credentials: true, 
+  origin: process.env.CLIENT_URL || "http://localhost:5173"
+}));
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   rolling: true,
-  name: 'gameSession', // Custom session name
+  name: 'gameSession',
   cookie: {
-    secure: false, // Set to true only in production with HTTPS
+    secure: process.env.NODE_ENV === 'production', // Only secure in production
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 12, // 12 hours
-    sameSite: 'lax' // Important for cross-origin requests
+    sameSite: 'lax'
   },
 }));
 
@@ -30,16 +34,25 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Socket.io setup
 const http = require('http');
 const initializeSocket = require('./socket');
 
-// Replace app.listen with this:
 const server = http.createServer(app);
 const { io, userSockets } = initializeSocket(server);
 
 // Make io and userSockets available to routes
 app.locals.io = io;
 app.locals.userSockets = userSockets;
+
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path');
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+}
 
 // Import Jaki routes
 const jakiRoutes = require('./routes/jaki');
@@ -600,4 +613,4 @@ app.post('/api/logout', (req, res) => {
 // Use the Jaki routes
 app.use('/api/jaki', jakiRoutes);
 
-server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

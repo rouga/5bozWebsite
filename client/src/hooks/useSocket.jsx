@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import useAuth from './useAuth';
+import { API_BASE_URL } from '../utils/api';
 
 export default function useSocket() {
   const [user] = useAuth();
@@ -27,7 +28,7 @@ export default function useSocket() {
       // Connect to socket with retry mechanism
       const connectSocket = () => {
         try {
-          socketRef.current = io('http://192.168.0.12:5000', {
+          socketRef.current = io(`${API_BASE_URL}`, {
             withCredentials: true,
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,

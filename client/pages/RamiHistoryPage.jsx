@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { GameCard, GameDetails, LoadingSpinner, EmptyState, PageHeader, StatusAlert } from '../src/components';
+import { API_BASE_URL } from '../src/utils/api';
 
 export default function RamiHistoryPage() {
   const [scores, setScores] = useState([]);
@@ -17,7 +18,7 @@ export default function RamiHistoryPage() {
   const fetchScores = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://192.168.0.12:5000/api/scores?page=${page}&limit=${scoresPerPage}`);
+      const res = await fetch(`${API_BASE_URL}/api/scores?page=${page}&limit=${scoresPerPage}`);
       
       if (!res.ok) {
         throw new Error('Failed to fetch scores');

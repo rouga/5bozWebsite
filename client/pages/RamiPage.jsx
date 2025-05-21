@@ -16,7 +16,8 @@ import {
   InvitationWaiting,
   ActiveGame
 } from '../src/components/GameSetup';
-import { gameAPI, handleApiError } from '../src/utils/api';
+import { gameAPI, handleApiError, API_BASE_URL } from '../src/utils/api';
+
 
 // Game state reducer
 const gameStateReducer = (state, action) => {
@@ -264,7 +265,7 @@ export default function RamiPage() {
   // API Functions
   const fetchRegisteredUsers = async () => {
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/users', {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
         credentials: 'include'
       });
       if (response.ok) {
@@ -316,7 +317,7 @@ export default function RamiPage() {
 
   const checkAllInvitationsAccepted = async (gameId) => {
     try {
-      const response = await fetch(`http://192.168.0.12:5000/api/game-invitations/${gameId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/game-invitations/${gameId}`, {
         credentials: 'include'
       });
       
@@ -365,7 +366,7 @@ export default function RamiPage() {
     });
     
     try {
-      const response = await fetch('http://192.168.0.12:5000/api/game-invitations', {
+      const response = await fetch(`${API_BASE_URL}/api/game-invitations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
