@@ -13,7 +13,8 @@ app.use(cors({
   credentials: true, 
   origin: process.env.CLIENT_URL || "http://localhost:5173",
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie']
 }));
 
 app.use(session({
@@ -26,9 +27,12 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production', // Only secure in production
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 12, // 12 hours
-    sameSite: 'lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Add this line
+    domain: process.env.NODE_ENV === 'production' ? process.env.DOMAIN || undefined : undefined, // Add this line
   },
 }));
+
+app.set('trust proxy', 1);
 
 app.use(express.json());
 

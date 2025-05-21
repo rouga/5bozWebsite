@@ -8,6 +8,9 @@
     "dev": "nodemon index.js",
     "build": "cd ../client && npm install && npm run build"
   },
+
+  "proxy": "https://fiveboz-backend.onrender.com",
+
   "engines": {
     "node": ">=16.0.0"
   },
