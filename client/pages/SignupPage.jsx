@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FormInput, StatusAlert } from '../src/components';
+import { API_BASE_URL } from '../src/utils/api';
 
 export default function SignupPage() {
   const [form, setForm] = useState({ username: '', password: '', code: '' });
