@@ -200,7 +200,7 @@ function HomePage() {
         <div className="col-12 col-lg-10">
           {/* Hero Section */}
           <PageHeader
-            title="Bienvenue à 5BOZ, w 3idkom mabrouk 🐑🐑🐑"
+            title="Bienvenue à 5BOZ"
             subtitle={
               <>
                 La plateforme pour suivre les scores de jeux entre 5boz, incluant<br/>
